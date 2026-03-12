@@ -1,0 +1,215 @@
+{
+  "metadata": {
+    "name": "advanced_logic",
+    "display_name": "Advanced Logic Demo",
+    "author": "AstrBot User",
+    "description": "展示循环、条件判断等高级逻辑块",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {
+      "name": "counter",
+      "type": "int",
+      "default": 0,
+      "persistent": true
+    }
+  ],
+  "handlers": [
+    {
+      "id": "countdown",
+      "name": "countdown",
+      "description": "倒计时示例（while循环）",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "countdown"
+        }
+      },
+      "flow": [
+        {
+          "id": "set_counter",
+          "block": "util.variable",
+          "params": {
+            "operation": "set",
+            "name": "counter",
+            "value": "5"
+          }
+        },
+        {
+          "id": "while_loop",
+          "block": "logic.while",
+          "params": {
+            "condition": "{counter} > 0",
+            "max_iterations": 10
+          },
+          "branches": {
+            "loop": [
+              {
+                "id": "reply_count",
+                "block": "action.reply_text",
+                "params": {
+                  "text": "倒计时: {counter}"
+                }
+              },
+              {
+                "id": "delay",
+                "block": "action.delay",
+                "params": {"seconds": 1}
+              },
+              {
+                "id": "decrement",
+                "block": "util.variable",
+                "params": {
+                  "operation": "decrement",
+                  "name": "counter"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "reply_done",
+          "block": "action.reply_text",
+          "params": {
+            "text": "🚀 倒计时结束！"
+          }
+        }
+      ]
+    },
+    {
+      "id": "foreach_demo",
+      "name": "list",
+      "description": "遍历列表示例",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "list"
+        }
+      },
+      "flow": [
+        {
+          "id": "foreach",
+          "block": "logic.for_each",
+          "params": {
+            "items": "[\"苹果\", \"香蕉\", \"橙子\"]",
+            "item_var": "fruit"
+          },
+          "branches": {
+            "loop": [
+              {
+                "id": "reply_item",
+                "block": "action.reply_text",
+                "params": {
+                  "text": "水果: {fruit}"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "switch_demo",
+      "name": "color",
+      "description": "多分支判断示例",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "color"
+        }
+      },
+      "flow": [
+        {
+          "id": "random_color",
+          "block": "util.random",
+          "params": {
+            "mode": "choice",
+            "choices": ["red", "green", "blue", "yellow"],
+            "save_to": "selected_color"
+          }
+        },
+        {
+          "id": "switch",
+          "block": "logic.switch",
+          "params": {
+            "value": "{selected_color}",
+            "cases": [
+              {"match": "red", "flow_id": "red_flow"},
+              {"match": "green", "flow_id": "green_flow"},
+              {"match": "blue", "flow_id": "blue_flow"}
+            ],
+            "default_flow_id": "default_flow"
+          },
+          "branches": {
+            "red_flow": [
+              {
+                "id": "reply_red",
+                "block": "action.reply_text",
+                "params": {"text": "🔴 红色代表热情！"}
+              }
+            ],
+            "green_flow": [
+              {
+                "id": "reply_green",
+                "block": "action.reply_text",
+                "params": {"text": "🟢 绿色代表希望！"}
+              }
+            ],
+            "blue_flow": [
+              {
+                "id": "reply_blue",
+                "block": "action.reply_text",
+                "params": {"text": "🔵 蓝色代表平静！"}
+              }
+            ],
+            "default_flow": [
+              {
+                "id": "reply_default",
+                "block": "action.reply_text",
+                "params": {"text": "🟡 黄色代表阳光！"}
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "try_catch_demo",
+      "name": "safe_div",
+      "description": "异常处理示例",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "div"
+        }
+      },
+      "flow": [
+        {
+          "id": "try_block",
+          "block": "logic.try_catch",
+          "params": {},
+          "branches": {
+            "try": [
+              {
+                "id": "risky_op",
+                "block": "action.reply_text",
+                "params": {
+                  "text": "执行可能出错的操作..."
+                }
+              }
+            ],
+            "catch": [
+              {
+                "id": "handle_error",
+                "block": "action.reply_text",
+                "params": {
+                  "text": "⚠️ 操作出错，已自动处理。"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

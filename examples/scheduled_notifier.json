@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "name": "scheduled_notifier",
+    "display_name": "Scheduled Notifier",
+    "author": "AstrBot User",
+    "description": "定时推送消息的插件示例",
+    "version": "1.0.0"
+  },
+  "variables": [],
+  "handlers": [
+    {
+      "id": "morning_greet",
+      "name": "morning_greeting",
+      "description": "每天早上9点问候",
+      "trigger": {
+        "block": "trigger.schedule",
+        "params": {
+          "schedule_type": "daily",
+          "time": "09:00"
+        }
+      },
+      "flow": [
+        {
+          "id": "get_time",
+          "block": "util.time_now",
+          "params": {
+            "format": "%Y-%m-%d",
+            "save_to": "today"
+          }
+        },
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "🌅 早上好！今天是 {today}，祝大家有美好的一天！"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hourly_check",
+      "name": "hourly_check",
+      "description": "每小时提醒",
+      "trigger": {
+        "block": "trigger.schedule",
+        "params": {
+          "schedule_type": "interval",
+          "interval_seconds": 3600
+        }
+      },
+      "flow": [
+        {
+          "id": "get_time",
+          "block": "util.time_now",
+          "params": {
+            "format": "%H:%M",
+            "save_to": "current_time"
+          }
+        },
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "⏰ 现在时间是 {current_time}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "weekly_report",
+      "name": "weekly_report",
+      "description": "每周一早上推送周报提醒",
+      "trigger": {
+        "block": "trigger.schedule",
+        "params": {
+          "schedule_type": "weekly",
+          "time": "09:00",
+          "day_of_week": 1
+        }
+      },
+      "flow": [
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "📋 新的一周开始了！记得提交上周的工作周报。"
+          }
+        }
+      ]
+    }
+  ]
+}

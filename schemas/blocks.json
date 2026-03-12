@@ -306,6 +306,310 @@
       "code_template": "@filter.on_llm_request()\nasync def {{handler_name}}(self, event: AstrMessageEvent, req: ProviderRequest):\n    {{handler_body}}"
     },
 
+    "trigger.user_join": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "用户加入",
+      "description": "当有用户加入群聊时触发",
+      "icon": "user-plus",
+      "color": "#4CAF50",
+      "params": {
+        "welcome_message": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "欢迎消息（可选，留空则不自动发送）",
+          "supports_template": true
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "加入用户ID"
+        },
+        "user_name": {
+          "type": "string",
+          "description": "加入用户昵称"
+        },
+        "group_id": {
+          "type": "string",
+          "description": "群ID"
+        }
+      },
+      "code_template": "@filter.on_user_join()\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.user_leave": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "用户离开",
+      "description": "当有用户离开群聊时触发",
+      "icon": "user-minus",
+      "color": "#4CAF50",
+      "params": {
+        "goodbye_message": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "告别消息（可选）",
+          "supports_template": true
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "离开用户ID"
+        },
+        "user_name": {
+          "type": "string",
+          "description": "离开用户昵称"
+        },
+        "group_id": {
+          "type": "string",
+          "description": "群ID"
+        }
+      },
+      "code_template": "@filter.on_user_leave()\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.file_upload": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "文件上传",
+      "description": "当有用户上传文件时触发",
+      "icon": "upload",
+      "color": "#4CAF50",
+      "params": {
+        "file_types": {
+          "type": "array",
+          "items": "string",
+          "required": false,
+          "default": [],
+          "description": "文件类型过滤（如: [\".jpg\", \".png\"]）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "file_name": {
+          "type": "string",
+          "description": "文件名"
+        },
+        "file_url": {
+          "type": "string",
+          "description": "文件URL"
+        },
+        "file_size": {
+          "type": "number",
+          "description": "文件大小（字节）"
+        },
+        "sender_id": {
+          "type": "string",
+          "description": "上传者ID"
+        }
+      },
+      "code_template": "@filter.on_file_upload()\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.reaction": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "表情回应",
+      "description": "当用户对消息添加表情回应时触发",
+      "icon": "smile",
+      "color": "#4CAF50",
+      "params": {
+        "emojis": {
+          "type": "array",
+          "items": "string",
+          "required": false,
+          "default": [],
+          "description": "表情过滤（留空则所有表情）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "emoji": {
+          "type": "string",
+          "description": "表情符号"
+        },
+        "message_id": {
+          "type": "string",
+          "description": "被回应的消息ID"
+        },
+        "sender_id": {
+          "type": "string",
+          "description": "回应者ID"
+        }
+      },
+      "code_template": "@filter.on_reaction()\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.schedule": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "定时触发",
+      "description": "按时间计划定时触发",
+      "icon": "calendar",
+      "color": "#4CAF50",
+      "params": {
+        "schedule_type": {
+          "type": "enum",
+          "enum": ["interval", "daily", "weekly", "cron"],
+          "required": true,
+          "default": "interval",
+          "description": "调度类型：interval(间隔)、daily(每日)、weekly(每周)、cron( cron表达式)"
+        },
+        "interval_seconds": {
+          "type": "number",
+          "required": false,
+          "default": 60,
+          "description": "间隔秒数（schedule_type=interval时）"
+        },
+        "time": {
+          "type": "string",
+          "required": false,
+          "default": "09:00",
+          "description": "触发时间 HH:MM（daily/weekly时）"
+        },
+        "day_of_week": {
+          "type": "number",
+          "required": false,
+          "default": 1,
+          "description": "星期几 1-7（weekly时，1=周一）"
+        },
+        "cron_expression": {
+          "type": "string",
+          "required": false,
+          "default": "0 9 * * *",
+          "description": "Cron表达式（cron时）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "trigger_time": {
+          "type": "string",
+          "description": "触发时间"
+        }
+      },
+      "code_template": "@filter.on_schedule(schedule_type=\"{{params.schedule_type}}\", {% if params.schedule_type == 'interval' %}interval={{params.interval_seconds}}{% elif params.schedule_type == 'daily' %}time=\"{{params.time}}\"{% elif params.schedule_type == 'weekly' %}time=\"{{params.time}}\", day={{params.day_of_week}}{% else %}cron=\"{{params.cron_expression}}\"{% endif %})\nasync def {{handler_name}}(self):\n    {{handler_body}}"
+    },
+
+    "trigger.random_chance": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "随机概率触发",
+      "description": "按指定概率随机触发",
+      "icon": "percent",
+      "color": "#4CAF50",
+      "params": {
+        "probability": {
+          "type": "number",
+          "required": true,
+          "default": 50,
+          "description": "触发概率（0-100）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "rolled_value": {
+          "type": "number",
+          "description": "掷出的值（1-100）"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''随机概率触发'''\n    import random\n    rolled = random.randint(1, 100)\n    if rolled <= {{params.probability}}:\n        {{handler_body}}"
+    },
+
+    "trigger.nth_time": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "第N次触发",
+      "description": "每第N次触发时执行",
+      "icon": "hash",
+      "color": "#4CAF50",
+      "params": {
+        "n": {
+          "type": "number",
+          "required": true,
+          "default": 5,
+          "description": "每N次触发"
+        },
+        "counter_key": {
+          "type": "string",
+          "required": false,
+          "default": "global",
+          "description": "计数器键（不同键独立计数）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "current_count": {
+          "type": "number",
+          "description": "当前计数"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''第N次触发'''\n    counter_key = \"{{params.counter_key}}\"\n    if not hasattr(self, '_nth_counter'):\n        self._nth_counter = {}\n    if counter_key not in self._nth_counter:\n        self._nth_counter[counter_key] = 0\n    self._nth_counter[counter_key] += 1\n    if self._nth_counter[counter_key] % {{params.n}} == 0:\n        current_count = self._nth_counter[counter_key]\n        {{handler_body}}"
+    },
+
     "action.reply_text": {
       "type": "action",
       "category": "action",
@@ -689,6 +993,49 @@
       "code_template": "self.{{params.variable}} = event.unified_msg_origin"
     },
 
+    "action.parallel": {
+      "type": "action",
+      "category": "action",
+      "display_name": "并行执行",
+      "description": "同时执行多个分支",
+      "icon": "git-branch",
+      "color": "#2196F3",
+      "params": {
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "branch_id": { "type": "string" },
+              "branch_name": { "type": "string" }
+            }
+          },
+          "required": true,
+          "default": [],
+          "description": "并行分支列表"
+        },
+        "wait_all": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "是否等待所有分支完成"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "所有分支完成后执行的流程"
+        }
+      },
+      "code_template": "import asyncio\nasync def _parallel_task_1():\n    {{branch_1_body}}\nasync def _parallel_task_2():\n    {{branch_2_body}}\n{% if params.wait_all %}await asyncio.gather(_parallel_task_1(), _parallel_task_2()){% else %}asyncio.create_task(_parallel_task_1())\nasyncio.create_task(_parallel_task_2()){% endif %}"
+    },
+
     "logic.if": {
       "type": "logic",
       "category": "logic",
@@ -811,6 +1158,47 @@
         }
       },
       "code_template": "for {{params.item_var}}_idx, {{params.item_var}} in enumerate({{params.items}}):\n    {{loop_body}}"
+    },
+
+    "logic.while": {
+      "type": "logic",
+      "category": "logic",
+      "display_name": "条件循环",
+      "description": "当条件为真时重复执行",
+      "icon": "refresh-cw",
+      "color": "#FF9800",
+      "params": {
+        "condition": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "循环条件表达式",
+          "supports_template": true
+        },
+        "max_iterations": {
+          "type": "number",
+          "required": false,
+          "default": 100,
+          "description": "最大迭代次数（防止死循环）"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "loop_flow": {
+          "type": "flow",
+          "description": "每次迭代执行的流程"
+        },
+        "iteration": {
+          "type": "number",
+          "description": "当前迭代次数"
+        }
+      },
+      "code_template": "_while_iter = 0\nwhile {{params.condition | render_condition}} and _while_iter < {{params.max_iterations}}:\n    _while_iter += 1\n    {{loop_body}}"
     },
 
     "logic.try_catch": {

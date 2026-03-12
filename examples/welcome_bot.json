@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "name": "welcome_bot",
+    "display_name": "Welcome Bot",
+    "author": "AstrBot User",
+    "description": "自动欢迎新成员、告别离开成员的群管理插件",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {
+      "name": "welcome_count",
+      "type": "int",
+      "default": 0,
+      "persistent": true,
+      "description": "欢迎人数统计"
+    }
+  ],
+  "handlers": [
+    {
+      "id": "user_join",
+      "name": "on_user_join",
+      "description": "新成员加入时欢迎",
+      "trigger": {
+        "block": "trigger.user_join",
+        "params": {}
+      },
+      "flow": [
+        {
+          "id": "increment",
+          "block": "util.variable",
+          "params": {
+            "operation": "increment",
+            "name": "welcome_count"
+          }
+        },
+        {
+          "id": "get_name",
+          "block": "util.get_sender_info",
+          "params": {
+            "info_type": "name",
+            "save_to": "new_user_name"
+          }
+        },
+        {
+          "id": "reply_welcome",
+          "block": "action.reply_text",
+          "params": {
+            "text": "🎉 欢迎加入本群，{new_user_name}！这是第{welcome_count}位新成员。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "user_leave",
+      "name": "on_user_leave",
+      "description": "成员离开时告别",
+      "trigger": {
+        "block": "trigger.user_leave",
+        "params": {}
+      },
+      "flow": [
+        {
+          "id": "reply_goodbye",
+          "block": "action.reply_text",
+          "params": {
+            "text": "👋 有成员离开了本群，祝一路顺风！"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stats_cmd",
+      "name": "stats",
+      "description": "查看欢迎统计",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "stats"
+        }
+      },
+      "flow": [
+        {
+          "id": "reply_stats",
+          "block": "action.reply_text",
+          "params": {
+            "text": "📊 本群已欢迎 {welcome_count} 位新成员！"
+          }
+        }
+      ]
+    }
+  ]
+}

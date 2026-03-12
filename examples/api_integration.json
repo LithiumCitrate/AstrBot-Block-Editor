@@ -1,0 +1,156 @@
+{
+  "metadata": {
+    "name": "api_integration",
+    "display_name": "API Integration",
+    "author": "AstrBot User",
+    "description": "HTTP请求和LLM调用示例",
+    "version": "1.0.0"
+  },
+  "variables": [],
+  "handlers": [
+    {
+      "id": "weather_cmd",
+      "name": "weather",
+      "description": "查询天气（示例）",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "weather"
+        }
+      },
+      "flow": [
+        {
+          "id": "http_request",
+          "block": "action.http_request",
+          "params": {
+            "method": "GET",
+            "url": "https://api.example.com/weather",
+            "timeout": 10,
+            "save_to": "weather_data"
+          }
+        },
+        {
+          "id": "check_status",
+          "block": "logic.if",
+          "params": {
+            "condition": "weather_data_status == 200"
+          },
+          "branches": {
+            "true": [
+              {
+                "id": "reply_success",
+                "block": "action.reply_text",
+                "params": {
+                  "text": "🌤️ 天气数据获取成功！"
+                }
+              }
+            ],
+            "false": [
+              {
+                "id": "reply_fail",
+                "block": "action.reply_text",
+                "params": {
+                  "text": "❌ 天气数据获取失败，请稍后重试。"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ai_chat",
+      "name": "ai",
+      "description": "AI对话",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "ai"
+        }
+      },
+      "flow": [
+        {
+          "id": "get_msg",
+          "block": "util.get_message",
+          "params": {
+            "info_type": "text",
+            "save_to": "user_input"
+          }
+        },
+        {
+          "id": "call_llm",
+          "block": "action.call_llm",
+          "params": {
+            "prompt": "{user_input}",
+            "system_prompt": "你是一个友好的助手，请简洁地回答问题。",
+            "save_to": "ai_response"
+          }
+        },
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "{ai_response_text}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "parallel_demo",
+      "name": "parallel",
+      "description": "并行执行示例",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "parallel"
+        }
+      },
+      "flow": [
+        {
+          "id": "parallel_exec",
+          "block": "action.parallel",
+          "params": {
+            "branches": [
+              {"branch_id": "task1", "branch_name": "任务1"},
+              {"branch_id": "task2", "branch_name": "任务2"}
+            ],
+            "wait_all": true
+          },
+          "branches": {
+            "task1": [
+              {
+                "id": "delay1",
+                "block": "action.delay",
+                "params": {"seconds": 1}
+              },
+              {
+                "id": "log1",
+                "block": "util.log",
+                "params": {"level": "info", "message": "任务1完成"}
+              }
+            ],
+            "task2": [
+              {
+                "id": "delay2",
+                "block": "action.delay",
+                "params": {"seconds": 2}
+              },
+              {
+                "id": "log2",
+                "block": "util.log",
+                "params": {"level": "info", "message": "任务2完成"}
+              }
+            ]
+          }
+        },
+        {
+          "id": "reply_done",
+          "block": "action.reply_text",
+          "params": {
+            "text": "✅ 所有并行任务已完成！"
+          }
+        }
+      ]
+    }
+  ]
+}

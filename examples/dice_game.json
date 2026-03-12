@@ -1,0 +1,99 @@
+{
+  "metadata": {
+    "name": "dice_game",
+    "display_name": "Dice Game",
+    "author": "AstrBot User",
+    "description": "掷骰子小游戏，支持随机概率触发",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {
+      "name": "total_rolls",
+      "type": "int",
+      "default": 0,
+      "persistent": true
+    }
+  ],
+  "handlers": [
+    {
+      "id": "roll_dice",
+      "name": "roll",
+      "description": "掷骰子",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "roll",
+          "alias": ["dice", "骰子"]
+        }
+      },
+      "flow": [
+        {
+          "id": "random_num",
+          "block": "util.random",
+          "params": {
+            "mode": "int",
+            "min": 1,
+            "max": 6,
+            "save_to": "dice_result"
+          }
+        },
+        {
+          "id": "increment",
+          "block": "util.variable",
+          "params": {
+            "operation": "increment",
+            "name": "total_rolls"
+          }
+        },
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "🎲 掷骰子结果: {dice_result} (第{total_rolls}次)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lucky_trigger",
+      "name": "lucky_event",
+      "description": "10%概率触发幸运事件",
+      "trigger": {
+        "block": "trigger.random_chance",
+        "params": {
+          "probability": 10
+        }
+      },
+      "flow": [
+        {
+          "id": "reply_lucky",
+          "block": "action.reply_text",
+          "params": {
+            "text": "🍀 幸运事件触发！{sender_name} 获得了神秘奖励！"
+          }
+        }
+      ]
+    },
+    {
+      "id": "every_5th",
+      "name": "fifth_message",
+      "description": "每第5条消息触发",
+      "trigger": {
+        "block": "trigger.nth_time",
+        "params": {
+          "n": 5,
+          "counter_key": "chat_messages"
+        }
+      },
+      "flow": [
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "🎊 这是第5的倍数条消息！"
+          }
+        }
+      ]
+    }
+  ]
+}

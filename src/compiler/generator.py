@@ -206,6 +206,42 @@ class CodeGenerator:
             # 关键词触发使用event_message_type + 内部判断
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
         
+        elif block_type == "trigger.user_join":
+            return "@filter.on_user_join()"
+        
+        elif block_type == "trigger.user_leave":
+            return "@filter.on_user_leave()"
+        
+        elif block_type == "trigger.file_upload":
+            return "@filter.on_file_upload()"
+        
+        elif block_type == "trigger.reaction":
+            return "@filter.on_reaction()"
+        
+        elif block_type == "trigger.schedule":
+            schedule_type = params.get("schedule_type", "interval")
+            if schedule_type == "interval":
+                interval = params.get("interval_seconds", 60)
+                return f"@filter.on_schedule(schedule_type=\"interval\", interval={interval})"
+            elif schedule_type == "daily":
+                time = params.get("time", "09:00")
+                return f'@filter.on_schedule(schedule_type="daily", time="{time}")'
+            elif schedule_type == "weekly":
+                time = params.get("time", "09:00")
+                day = params.get("day_of_week", 1)
+                return f'@filter.on_schedule(schedule_type="weekly", time="{time}", day={day})'
+            else:  # cron
+                cron = params.get("cron_expression", "0 9 * * *")
+                return f'@filter.on_schedule(schedule_type="cron", cron="{cron}")'
+        
+        elif block_type == "trigger.random_chance":
+            # 随机概率触发使用event_message_type + 内部判断
+            return "@filter.event_message_type(filter.EventMessageType.ALL)"
+        
+        elif block_type == "trigger.nth_time":
+            # 第N次触发使用event_message_type + 内部判断
+            return "@filter.event_message_type(filter.EventMessageType.ALL)"
+        
         return ""
     
     def _filter_to_decorator(self, f: dict) -> str:
@@ -235,6 +271,14 @@ class CodeGenerator:
         if handler.trigger.block_type == "trigger.keyword":
             lines.extend(self._generate_keyword_check(handler.trigger.params))
         
+        # 特殊处理随机概率触发
+        elif handler.trigger.block_type == "trigger.random_chance":
+            lines.extend(self._generate_random_chance_check(handler.trigger.params))
+        
+        # 特殊处理第N次触发
+        elif handler.trigger.block_type == "trigger.nth_time":
+            lines.extend(self._generate_nth_time_check(handler.trigger.params))
+        
         # 生成流程块代码
         for block in handler.flow:
             block_lines = self._generate_block_code(block, indent_level=2)
@@ -243,6 +287,39 @@ class CodeGenerator:
         # 如果没有生成任何代码，添加pass
         if not lines:
             lines.append(f"{indent}pass")
+        
+        return lines
+    
+    def _generate_random_chance_check(self, params: dict) -> list[str]:
+        """生成随机概率检查代码"""
+        probability = params.get("probability", 50)
+        
+        lines = []
+        indent = self.indent * 2
+        
+        lines.append(f"{indent}import random")
+        lines.append(f"{indent}rolled = random.randint(1, 100)")
+        lines.append(f"{indent}if rolled > {probability}:")
+        lines.append(f"{indent}    return")
+        
+        return lines
+    
+    def _generate_nth_time_check(self, params: dict) -> list[str]:
+        """生成第N次触发检查代码"""
+        n = params.get("n", 5)
+        counter_key = params.get("counter_key", "global")
+        
+        lines = []
+        indent = self.indent * 2
+        
+        lines.append(f'{indent}counter_key = "{counter_key}"')
+        lines.append(f"{indent}if not hasattr(self, '_nth_counter'):")
+        lines.append(f"{indent}    self._nth_counter = {{}}")
+        lines.append(f"{indent}if counter_key not in self._nth_counter:")
+        lines.append(f"{indent}    self._nth_counter[counter_key] = 0")
+        lines.append(f"{indent}self._nth_counter[counter_key] += 1")
+        lines.append(f"{indent}if self._nth_counter[counter_key] % {n} != 0:")
+        lines.append(f"{indent}    return")
         
         return lines
     
@@ -376,6 +453,31 @@ class CodeGenerator:
             var = params.get("variable", "")
             lines.append(f"{base_indent}self.{var} = event.unified_msg_origin")
         
+        elif block_type == "action.parallel":
+            branches = params.get("branches", [])
+            wait_all = params.get("wait_all", True)
+            
+            # 生成并行任务函数
+            for i, branch in enumerate(branches):
+                branch_id = branch.get("branch_id", f"branch_{i}")
+                branch_blocks = block.branches.get(branch_id, [])
+                
+                lines.append(f"{base_indent}async def _parallel_task_{i}():")
+                if branch_blocks:
+                    for b in branch_blocks:
+                        for line in self._generate_block_code(b, indent_level + 1):
+                            lines.append(line)
+                else:
+                    lines.append(f"{base_indent}    pass")
+            
+            # 生成并行执行代码
+            task_names = [f"_parallel_task_{i}" for i in range(len(branches))]
+            if wait_all:
+                lines.append(f"{base_indent}await asyncio.gather({', '.join(task_names)})")
+            else:
+                for task in task_names:
+                    lines.append(f"{base_indent}asyncio.create_task({task}())")
+        
         elif block_type == "logic.if":
             condition = self._render_condition(params.get("condition", ""))
             lines.append(f"{base_indent}if {condition}:")
@@ -400,6 +502,22 @@ class CodeGenerator:
             item_var = params.get("item_var", "item")
             
             lines.append(f"{base_indent}for {item_var}_idx, {item_var} in enumerate({items}):")
+            
+            loop_blocks = block.branches.get("loop", [])
+            if loop_blocks:
+                for b in loop_blocks:
+                    for line in self._generate_block_code(b, indent_level + 1):
+                        lines.append(line)
+            else:
+                lines.append(f"{base_indent}    pass")
+        
+        elif block_type == "logic.while":
+            condition = self._render_condition(params.get("condition", ""))
+            max_iter = params.get("max_iterations", 100)
+            
+            lines.append(f"{base_indent}_while_iter = 0")
+            lines.append(f"{base_indent}while {condition} and _while_iter < {max_iter}:")
+            lines.append(f"{base_indent}    _while_iter += 1")
             
             loop_blocks = block.branches.get("loop", [])
             if loop_blocks:
