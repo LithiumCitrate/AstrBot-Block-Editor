@@ -211,9 +211,6 @@ my_plugin/
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 创建 Pull Request
 
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
 
 ## 🙏 致谢
 
@@ -255,7 +252,3 @@ pip install PyQt5 PyQtWebEngine
 # Launch editor
 cd gui && python app.py
 ```
-
-### License
-
-MIT License - see [LICENSE](LICENSE) for details.
