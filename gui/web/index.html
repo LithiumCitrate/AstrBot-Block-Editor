@@ -277,6 +277,52 @@
         .statusbar { display: flex; align-items: center; padding: 6px 16px; background: var(--bg-surface); border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted); gap: 16px; }
         .status-item { display: flex; align-items: center; gap: 4px; }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+        
+        /* 搜索框 */
+        .search-box { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 12px; }
+        .search-box input { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 13px; outline: none; }
+        .search-box input::placeholder { color: var(--text-muted); }
+        
+        /* 新手引导弹窗 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .modal { background: var(--bg-surface); border-radius: var(--radius); padding: 32px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .modal-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+        .modal-subtitle { color: var(--text-secondary); margin-bottom: 24px; }
+        .template-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+        .template-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; cursor: pointer; transition: all 0.2s; }
+        .template-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .template-card.selected { border-color: var(--primary); background: rgba(22, 119, 255, 0.1); }
+        .template-icon { font-size: 32px; margin-bottom: 8px; }
+        .template-name { font-weight: 600; margin-bottom: 4px; }
+        .template-desc { font-size: 12px; color: var(--text-muted); }
+        .tutorial-steps { margin-bottom: 24px; }
+        .tutorial-step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; padding: 12px; background: var(--bg-card); border-radius: var(--radius-sm); }
+        .step-number { width: 24px; height: 24px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+        .step-content { flex: 1; }
+        .step-title { font-weight: 600; margin-bottom: 4px; }
+        .step-desc { font-size: 12px; color: var(--text-secondary); }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+        .btn-lg { padding: 12px 24px; font-size: 14px; }
+        
+        /* 连接点 */
+        .connection-point { width: 12px; height: 12px; border-radius: 50%; background: var(--primary); position: absolute; cursor: crosshair; transition: transform 0.2s, box-shadow 0.2s; }
+        .connection-point:hover { transform: scale(1.3); box-shadow: 0 0 8px var(--primary); }
+        .connection-point.output { bottom: -6px; left: 50%; transform: translateX(-50%); }
+        .connection-point.input { top: -6px; left: 50%; transform: translateX(-50%); }
+        .connection-point.output:hover, .connection-point.input:hover { transform: translateX(-50%) scale(1.3); }
+        .connection-point.multi-output { position: absolute; bottom: -6px; transform: translateX(-50%); }
+        
+        /* 错误提示 */
+        .error-toast { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); background: var(--danger); color: white; padding: 12px 24px; border-radius: var(--radius-sm); font-size: 13px; z-index: 9998; animation: slideUp 0.3s ease; }
+        .warning-toast { background: var(--warning); }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        
+        /* 快捷键提示 */
+        .shortcut-hint { font-size: 10px; color: var(--text-muted); margin-left: 4px; background: var(--bg-card); padding: 2px 6px; border-radius: 4px; }
+        
+        /* 块高亮 */
+        .block-card.highlight { border-color: var(--primary); background: rgba(22, 119, 255, 0.1); }
+        .ws-block.can-connect { box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.3); }
     </style>
 </head>
 <body>
@@ -294,6 +340,9 @@
             <button class="btn btn-primary" onclick="compileCode()">▶ 编译预览</button>
             <button class="btn btn-success" onclick="exportPlugin()">📦 导出</button>
             <button class="btn" onclick="addHandler()">➕ Handler</button>
+            <button class="btn" onclick="editor.undo()">↩️ 撤销 <span class="shortcut-hint">Ctrl+Z</span></button>
+            <button class="btn" onclick="editor.redo()">↪️ 重做 <span class="shortcut-hint">Ctrl+Y</span></button>
+            <button class="btn" onclick="showTutorial()">❓ 帮助</button>
             <div class="plugin-meta">
                 <input type="text" class="input-field" id="pluginName" placeholder="插件名称" value="my_plugin" style="width: 120px;">
                 <input type="text" class="input-field" id="pluginAuthor" placeholder="作者" value="user" style="width: 100px;">
@@ -304,6 +353,10 @@
             <div class="sidebar">
                 <div class="sidebar-header">
                     <div class="sidebar-title">行为块库</div>
+                    <div class="search-box">
+                        <span>🔍</span>
+                        <input type="text" id="blockSearch" placeholder="搜索块..." oninput="filterBlocks(this.value)">
+                    </div>
                     <div class="category-pills" id="categoryPills">
                         <div class="pill pill-trigger active" data-category="trigger">触发器</div>
                         <div class="pill pill-action" data-category="action">动作</div>
@@ -365,6 +418,67 @@
             <div class="status-item"><div class="status-dot"></div>就绪</div>
             <div class="status-item">块: <span id="blockCount">0</span></div>
             <div class="status-item">Handler: <span id="handlerCount">1</span></div>
+            <div class="status-item" id="errorStatus" style="color: var(--danger); display: none;">⚠️ <span id="errorMsg"></span></div>
+        </div>
+    </div>
+    
+    <!-- 新手引导弹窗 -->
+    <div class="modal-overlay" id="welcomeModal">
+        <div class="modal">
+            <div class="modal-title">🧩 欢迎使用 Block Editor</div>
+            <div class="modal-subtitle">通过拖拽积木块，零代码创建 AstrBot 插件</div>
+            
+            <div class="tutorial-steps">
+                <div class="tutorial-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <div class="step-title">选择触发器</div>
+                        <div class="step-desc">从左侧拖拽一个「触发器」块（绿色）到工作区，决定插件何时触发</div>
+                    </div>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <div class="step-title">添加动作</div>
+                        <div class="step-desc">拖拽「动作」块（紫色）到触发器下方，自动连接。点击块可修改参数</div>
+                    </div>
+                </div>
+                <div class="tutorial-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <div class="step-title">编译导出</div>
+                        <div class="step-desc">点击「编译预览」查看代码，「导出」生成插件目录</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="font-weight: 600; margin-bottom: 12px;">📦 或选择模板快速开始：</div>
+            <div class="template-grid">
+                <div class="template-card" onclick="selectTemplate('hello')">
+                    <div class="template-icon">👋</div>
+                    <div class="template-name">问候插件</div>
+                    <div class="template-desc">收到指令时回复问候语</div>
+                </div>
+                <div class="template-card" onclick="selectTemplate('dice')">
+                    <div class="template-icon">🎲</div>
+                    <div class="template-name">骰子游戏</div>
+                    <div class="template-desc">随机生成骰子点数</div>
+                </div>
+                <div class="template-card" onclick="selectTemplate('welcome')">
+                    <div class="template-icon">🚪</div>
+                    <div class="template-name">欢迎机器人</div>
+                    <div class="template-desc">新成员入群自动欢迎</div>
+                </div>
+                <div class="template-card" onclick="selectTemplate('empty')">
+                    <div class="template-icon">📝</div>
+                    <div class="template-name">空白项目</div>
+                    <div class="template-desc">从零开始创建</div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-lg" onclick="closeWelcomeModal()">开始使用</button>
+            </div>
         </div>
     </div>
 

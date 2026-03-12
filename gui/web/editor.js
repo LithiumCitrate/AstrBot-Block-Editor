@@ -10,6 +10,11 @@ class BlockEditor {
         this.dragOffset = { x: 0, y: 0 };
         this.blockIdCounter = 0;
         
+        // 撤销/重做
+        this.history = [];
+        this.historyIndex = -1;
+        this.maxHistory = 50;
+        
         this.workspace = document.getElementById('workspace');
         this.workspaceBlocks = document.getElementById('workspaceBlocks');
         this.connectionsGroup = document.getElementById('connectionsGroup');
@@ -21,6 +26,149 @@ class BlockEditor {
         this.loadBlocksPanel('trigger');
         this.setupEventListeners();
         this.updateHandlerTabs();
+        this.checkFirstVisit();
+    }
+    
+    // 检查是否首次访问
+    checkFirstVisit() {
+        const visited = localStorage.getItem('blockEditorVisited');
+        if (!visited) {
+            // 首次访问，显示引导
+            document.getElementById('welcomeModal').style.display = 'flex';
+        } else {
+            document.getElementById('welcomeModal').style.display = 'none';
+        }
+    }
+    
+    // 保存状态到历史
+    saveState() {
+        const state = {
+            blocks: JSON.parse(JSON.stringify(this.blocks)),
+            connections: JSON.parse(JSON.stringify(this.connections)),
+            blockIdCounter: this.blockIdCounter
+        };
+        
+        // 移除当前位置之后的历史
+        this.history = this.history.slice(0, this.historyIndex + 1);
+        this.history.push(state);
+        
+        // 限制历史长度
+        if (this.history.length > this.maxHistory) {
+            this.history.shift();
+        } else {
+            this.historyIndex++;
+        }
+    }
+    
+    // 撤销
+    undo() {
+        if (this.historyIndex < 0) {
+            this.showToast('没有可撤销的操作', 'warning');
+            return;
+        }
+        
+        const state = this.history[this.historyIndex];
+        this.historyIndex--;
+        
+        this.restoreState(state);
+        this.showToast('已撤销');
+    }
+    
+    // 重做
+    redo() {
+        if (this.historyIndex >= this.history.length - 1) {
+            this.showToast('没有可重做的操作', 'warning');
+            return;
+        }
+        
+        this.historyIndex++;
+        const state = this.history[this.historyIndex];
+        
+        this.restoreState(state);
+        this.showToast('已重做');
+    }
+    
+    // 恢复状态
+    restoreState(state) {
+        this.blocks = JSON.parse(JSON.stringify(state.blocks));
+        this.connections = JSON.parse(JSON.stringify(state.connections));
+        this.blockIdCounter = state.blockIdCounter;
+        
+        // 重新渲染
+        this.workspaceBlocks.innerHTML = '';
+        this.blocks.forEach(b => this.renderBlock(b));
+        this.updateConnections();
+        this.updateBlockCount();
+        this.selectBlock(null);
+        
+        if (this.blocks.length === 0) {
+            this.showEmptyState();
+        } else {
+            this.hideEmptyState();
+        }
+    }
+    
+    // 显示提示
+    showToast(message, type = 'info') {
+        // 移除旧的toast
+        document.querySelectorAll('.error-toast').forEach(t => t.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `error-toast ${type === 'warning' ? 'warning-toast' : ''}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 2000);
+    }
+    
+    // 验证工作流
+    validate() {
+        const errors = [];
+        
+        // 检查是否有触发器
+        const triggers = this.blocks.filter(b => BLOCKS[b.type].type === 'trigger');
+        if (triggers.length === 0 && this.blocks.length > 0) {
+            errors.push('缺少触发器：请添加一个触发器块（绿色）');
+        }
+        
+        // 检查是否有未连接的块
+        const connectedIds = new Set();
+        this.connections.forEach(c => {
+            connectedIds.add(c.from);
+            connectedIds.add(c.to);
+        });
+        
+        const unconnectedBlocks = this.blocks.filter(b => 
+            BLOCKS[b.type].type !== 'trigger' && !connectedIds.has(b.id)
+        );
+        
+        if (unconnectedBlocks.length > 0) {
+            errors.push(`有 ${unconnectedBlocks.length} 个块未连接`);
+        }
+        
+        // 检查必填参数
+        this.blocks.forEach(b => {
+            const blockDef = BLOCKS[b.type];
+            blockDef.params.forEach(p => {
+                if (p.required && !b.params[p.name]) {
+                    errors.push(`块「${blockDef.name}」缺少参数：${p.label}`);
+                }
+            });
+        });
+        
+        // 显示错误
+        const errorStatus = document.getElementById('errorStatus');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        if (errors.length > 0) {
+            errorStatus.style.display = 'flex';
+            errorMsg.textContent = errors[0];
+            this.showToast(errors[0], 'error');
+        } else {
+            errorStatus.style.display = 'none';
+        }
+        
+        return errors.length === 0;
     }
     
     loadBlocksPanel(category) {
@@ -61,10 +209,38 @@ class BlockEditor {
             }
         });
         
-        // 键盘删除
+        // 键盘快捷键
         document.addEventListener('keydown', (e) => {
+            // 删除
             if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedBlock) {
+                e.preventDefault();
                 this.deleteBlock(this.selectedBlock);
+            }
+            // 撤销 Ctrl+Z
+            if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+            }
+            // 重做 Ctrl+Y 或 Ctrl+Shift+Z
+            if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                this.redo();
+            }
+            // 复制块 Ctrl+C
+            if (e.ctrlKey && e.key === 'c' && this.selectedBlock) {
+                e.preventDefault();
+                this.copiedBlock = this.selectedBlock;
+                this.showToast('块已复制');
+            }
+            // 粘贴块 Ctrl+V
+            if (e.ctrlKey && e.key === 'v' && this.copiedBlock) {
+                e.preventDefault();
+                const b = this.copiedBlock;
+                this.addBlockToWorkspace(b.type, b.x + 30, b.y + 30);
+                // 复制参数
+                const newBlock = this.blocks[this.blocks.length - 1];
+                newBlock.params = JSON.parse(JSON.stringify(b.params));
+                this.updateBlockDisplay(newBlock);
             }
         });
     }
@@ -109,11 +285,52 @@ class BlockEditor {
             el.style.left = block.x + 'px';
             el.style.top = block.y + 'px';
             
+            // 高亮可连接的块
+            this.highlightConnectableBlocks(block);
+            
             this.updateConnections();
         }
     }
     
+    // 高亮可连接的块
+    highlightConnectableBlocks(movingBlock) {
+        // 移除所有高亮
+        document.querySelectorAll('.ws-block.can-connect').forEach(el => {
+            el.classList.remove('can-connect');
+        });
+        
+        const movingBlockDef = BLOCKS[movingBlock.type];
+        if (movingBlockDef.type === 'trigger') return; // 触发器不需要连接
+        
+        const SNAP = 50; // 扩大检测范围
+        
+        for (const other of this.blocks) {
+            if (other.id === movingBlock.id) continue;
+            
+            const otherBlockDef = BLOCKS[other.type];
+            
+            // 检查是否可以连接到这个块的输出
+            const expectedY = other.y + other.height + 10;
+            if (Math.abs(movingBlock.y - expectedY) < SNAP) {
+                const outputs = otherBlockDef.outputs || ['flow'];
+                outputs.forEach((output, i) => {
+                    if (output.startsWith('flow')) {
+                        const offsetX = outputs.length > 1 ? (i - (outputs.length - 1) / 2) * 40 : 0;
+                        if (Math.abs(movingBlock.x - (other.x + offsetX)) < SNAP) {
+                            document.getElementById(other.id)?.classList.add('can-connect');
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
     endDrag() {
+        // 清除高亮
+        document.querySelectorAll('.ws-block.can-connect').forEach(el => {
+            el.classList.remove('can-connect');
+        });
+        
         if (this.draggedBlock?.type === 'new') {
             const rect = this.workspace.getBoundingClientRect();
             const x = rect.width / 2 - 110;
@@ -133,6 +350,8 @@ class BlockEditor {
         const block = BLOCKS[blockType];
         if (!block) return;
         
+        this.saveState();
+        
         this.blockIdCounter++;
         const instance = {
             id: `block_${this.blockIdCounter}`,
@@ -151,6 +370,7 @@ class BlockEditor {
         this.selectBlock(instance);
         this.updateBlockCount();
         this.hideEmptyState();
+        this.validate();
     }
     
     renderBlock(instance) {
@@ -243,8 +463,21 @@ class BlockEditor {
         }
     }
     
+    // 更新块显示
+    updateBlockDisplay(instance) {
+        const el = document.getElementById(instance.id);
+        if (el) {
+            el.outerHTML = generateWorkspaceBlock(instance);
+            const newEl = document.getElementById(instance.id);
+            newEl.addEventListener('mousedown', (e) => this.startDragExisting(e, instance));
+            newEl.addEventListener('click', (e) => { e.stopPropagation(); this.selectBlock(instance); });
+        }
+    }
+    
     deleteBlock(instance) {
         if (!instance) return;
+        
+        this.saveState();
         
         this.connections = this.connections.filter(c => c.from !== instance.id && c.to !== instance.id);
         this.blocks = this.blocks.filter(b => b.id !== instance.id);
@@ -253,6 +486,7 @@ class BlockEditor {
         this.selectBlock(null);
         this.updateConnections();
         this.updateBlockCount();
+        this.validate();
         
         if (this.blocks.length === 0) this.showEmptyState();
     }
@@ -476,6 +710,11 @@ class BlockEditor {
     }
     
     compileCode() {
+        if (!this.validate()) {
+            document.getElementById('codeContent').textContent = '# 请先修复错误';
+            return;
+        }
+        
         const workflow = this.buildWorkflowJSON();
         
         if (window.pybridge) {
@@ -483,6 +722,83 @@ class BlockEditor {
             document.getElementById('codeContent').textContent = result.success ? result.code : '# 错误:\n' + result.errors.join('\n');
         } else {
             document.getElementById('codeContent').textContent = this.generateMockCode(workflow);
+        }
+    }
+    
+    // 加载模板
+    loadTemplate(templateName) {
+        const templates = {
+            hello: {
+                metadata: { name: 'hello_plugin', author: 'user', version: '1.0.0' },
+                blocks: [
+                    { type: 'trigger.command', x: 100, y: 50, params: { command: 'hello', alias: ['hi'] } },
+                    { type: 'action.reply_text', x: 100, y: 150, params: { text: '你好，{sender_name}！' } }
+                ],
+                connections: [{ from: 'block_1', to: 'block_2', outputPort: 'flow' }]
+            },
+            dice: {
+                metadata: { name: 'dice_game', author: 'user', version: '1.0.0' },
+                blocks: [
+                    { type: 'trigger.command', x: 100, y: 50, params: { command: 'dice' } },
+                    { type: 'util.random', x: 100, y: 150, params: { min: 1, max: 6, save_to: 'dice_result' } },
+                    { type: 'action.reply_text', x: 100, y: 250, params: { text: '🎲 骰子结果: {dice_result}' } }
+                ],
+                connections: [{ from: 'block_1', to: 'block_2', outputPort: 'flow' }, { from: 'block_2', to: 'block_3', outputPort: 'flow' }]
+            },
+            welcome: {
+                metadata: { name: 'welcome_bot', author: 'user', version: '1.0.0' },
+                blocks: [
+                    { type: 'trigger.keyword', x: 100, y: 50, params: { keywords: ['欢迎', 'welcome'] } },
+                    { type: 'action.reply_text', x: 100, y: 150, params: { text: '欢迎 {sender_name} 加入群聊！' } }
+                ],
+                connections: [{ from: 'block_1', to: 'block_2', outputPort: 'flow' }]
+            },
+            empty: {
+                metadata: { name: 'my_plugin', author: 'user', version: '1.0.0' },
+                blocks: [],
+                connections: []
+            }
+        };
+        
+        const template = templates[templateName];
+        if (!template) return;
+        
+        // 清空当前
+        this.blocks = [];
+        this.connections = [];
+        this.workspaceBlocks.innerHTML = '';
+        this.connectionsGroup.innerHTML = '';
+        
+        // 设置元数据
+        document.getElementById('pluginName').value = template.metadata.name;
+        document.getElementById('pluginAuthor').value = template.metadata.author;
+        
+        // 加载块
+        template.blocks.forEach((b, i) => {
+            this.blockIdCounter++;
+            const instance = {
+                id: `block_${this.blockIdCounter}`,
+                type: b.type,
+                params: b.params,
+                x: b.x,
+                y: b.y,
+                width: 220,
+                height: 80 + BLOCKS[b.type].params.length * 32
+            };
+            this.blocks.push(instance);
+            this.renderBlock(instance);
+        });
+        
+        // 加载连接
+        this.connections = template.connections.map(c => ({ ...c }));
+        
+        this.updateConnections();
+        this.updateBlockCount();
+        this.hideEmptyState();
+        this.saveState();
+        
+        if (templateName !== 'empty') {
+            this.showToast('模板加载成功！');
         }
     }
     
@@ -560,5 +876,38 @@ function exportPlugin() {
 }
 
 function addHandler() { editor.addHandler(); }
+
+// 显示教程
+function showTutorial() {
+    document.getElementById('welcomeModal').style.display = 'flex';
+}
+
+// 关闭欢迎弹窗
+function closeWelcomeModal() {
+    document.getElementById('welcomeModal').style.display = 'none';
+    localStorage.setItem('blockEditorVisited', 'true');
+}
+
+// 选择模板
+function selectTemplate(name) {
+    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    editor.loadTemplate(name);
+    closeWelcomeModal();
+}
+
+// 搜索块
+function filterBlocks(query) {
+    const container = document.getElementById('blocksContainer');
+    const cards = container.querySelectorAll('.block-card');
+    const q = query.toLowerCase();
+    
+    cards.forEach(card => {
+        const name = card.querySelector('.block-name').textContent.toLowerCase();
+        const type = card.querySelector('.block-type').textContent.toLowerCase();
+        const visible = name.includes(q) || type.includes(q);
+        card.style.display = visible ? '' : 'none';
+    });
+}
 
 const editor = new BlockEditor();

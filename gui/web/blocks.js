@@ -189,6 +189,34 @@ function generateWorkspaceBlock(blockInstance) {
         `;
     }).join('');
     
+    // 生成连接点
+    const blockType = block.type;
+    let connectionPointsHtml = '';
+    
+    // 输入点（顶部）- 非触发器块有输入点
+    if (blockType !== 'trigger') {
+        connectionPointsHtml += `<div class="connection-point input" title="输入端口"></div>`;
+    }
+    
+    // 输出点（底部）
+    const outputs = block.outputs || ['flow'];
+    if (outputs.length > 0 && blockType !== 'util' || outputs.includes('flow')) {
+        // 多输出端口时水平排列
+        outputs.forEach((output, i) => {
+            if (output.startsWith('flow')) {
+                const offsetX = outputs.length > 1 ? (i - (outputs.length - 1) / 2) * 40 : 0;
+                const color = {
+                    'flow': '#6366f1',
+                    'flow_true': '#10b981',
+                    'flow_false': '#ef4444',
+                    'flow_loop': '#f59e0b',
+                    'flow_done': '#06b6d4'
+                }[output] || '#6366f1';
+                connectionPointsHtml += `<div class="connection-point output multi-output" style="left: calc(50% + ${offsetX}px); background: ${color};" title="${output}"></div>`;
+            }
+        });
+    }
+    
     return `
         <div class="ws-block ${blockInstance.selected ? 'selected' : ''}" 
              id="${blockInstance.id}" 
@@ -198,6 +226,7 @@ function generateWorkspaceBlock(blockInstance) {
                 <span class="ws-block-title">${block.name}</span>
             </div>
             <div class="ws-block-content">${paramsHtml}</div>
+            ${connectionPointsHtml}
         </div>
     `;
 }
