@@ -127,8 +127,10 @@ const BLOCKS = {
     'util.random': {
         type: 'util', category: 'util', name: '随机数', color: '#67e8f9',
         params: [
+            { name: 'mode', type: 'enum', label: '模式', default: 'int', options: ['int', 'float', 'choice'] },
             { name: 'min', type: 'number', label: '最小值', default: 1 },
             { name: 'max', type: 'number', label: '最大值', default: 100 },
+            { name: 'choices', type: 'array', label: '选项列表', default: [] },
             { name: 'save_to', type: 'string', label: '保存到', default: 'random_num' }
         ],
         inputs: ['flow'], outputs: ['flow', 'result']
@@ -149,6 +151,96 @@ const BLOCKS = {
             { name: 'message', type: 'template', label: '消息', default: '' }
         ],
         inputs: ['flow'], outputs: ['flow']
+    },
+    'util.get_group_info': {
+        type: 'util', category: 'util', name: '群组信息', color: '#0891b2',
+        params: [
+            { name: 'info_type', type: 'enum', label: '类型', default: 'id', options: ['id', 'name', 'member_count'] },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'group_id' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.get_message': {
+        type: 'util', category: 'util', name: '消息信息', color: '#0e7490',
+        params: [
+            { name: 'info_type', type: 'enum', label: '类型', default: 'text', options: ['text', 'outline', 'type', 'has_image'] },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'msg_text' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    
+    // 更多触发器
+    'trigger.event_message_type': {
+        type: 'trigger', category: 'trigger', name: '消息类型触发', color: '#047857',
+        params: [
+            { name: 'message_type', type: 'enum', label: '类型', default: 'ALL', options: ['ALL', 'PRIVATE_MESSAGE', 'GROUP_MESSAGE'] }
+        ],
+        outputs: ['flow', 'event']
+    },
+    'trigger.platform': {
+        type: 'trigger', category: 'trigger', name: '平台触发', color: '#059669',
+        params: [
+            { name: 'platforms', type: 'array', label: '平台', default: ['ALL'] }
+        ],
+        outputs: ['flow', 'event']
+    },
+    'trigger.on_loaded': {
+        type: 'trigger', category: 'trigger', name: 'Bot加载完成', color: '#10b981',
+        params: [],
+        outputs: []
+    },
+    'trigger.schedule': {
+        type: 'trigger', category: 'trigger', name: '定时触发', color: '#34d399',
+        params: [
+            { name: 'schedule_type', type: 'enum', label: '类型', default: 'interval', options: ['interval', 'daily', 'weekly', 'cron'] },
+            { name: 'interval_seconds', type: 'number', label: '间隔秒数', default: 60 },
+            { name: 'time', type: 'string', label: '时间', default: '09:00' }
+        ],
+        outputs: ['flow']
+    },
+    
+    // 更多动作
+    'action.reply_chain': {
+        type: 'action', category: 'action', name: '回复消息链', color: '#7c3aed',
+        params: [
+            { name: 'components', type: 'array', label: '组件', default: [] }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.send_message': {
+        type: 'action', category: 'action', name: '主动发送消息', color: '#6d28d9',
+        params: [
+            { name: 'target_type', type: 'enum', label: '目标', default: 'current', options: ['current', 'saved', 'custom'] },
+            { name: 'message_type', type: 'enum', label: '类型', default: 'text', options: ['text', 'image'] },
+            { name: 'content', type: 'template', label: '内容', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.call_llm': {
+        type: 'action', category: 'action', name: '调用LLM', color: '#5b21b6',
+        params: [
+            { name: 'prompt', type: 'template', label: '提示词', default: '' },
+            { name: 'system_prompt', type: 'string', label: '系统提示', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'llm_response' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'response']
+    },
+    'action.store_umo': {
+        type: 'action', category: 'action', name: '保存会话', color: '#4c1d95',
+        params: [
+            { name: 'variable', type: 'string', label: '变量名', default: 'saved_umo' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    
+    // 更多逻辑
+    'logic.while': {
+        type: 'logic', category: 'logic', name: 'While循环', color: '#d97706',
+        params: [
+            { name: 'condition', type: 'template', label: '条件', default: '{value} > 0' },
+            { name: 'max_iterations', type: 'number', label: '最大迭代', default: 100 }
+        ],
+        inputs: ['flow'], outputs: ['flow_loop']
     }
 };
 

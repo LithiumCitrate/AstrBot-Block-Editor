@@ -622,7 +622,7 @@ class BlockEditor {
                         const branches = {};
                         const outputs = blockDef.outputs || [];
                         for (const output of outputs) {
-                            const subFlow = this.buildFlowRecursive(block.id, output);
+                            const subFlow = this.buildFlowRecursive(block.id, output, buildFlow);
                             if (subFlow.length > 0) {
                                 branches[output] = subFlow;
                             }
@@ -665,7 +665,7 @@ class BlockEditor {
         };
     }
     
-    buildFlowRecursive(blockId, outputPort) {
+    buildFlowRecursive(blockId, outputPort, buildFlowFn) {
         const flow = [];
         const conns = this.connections.filter(c => c.from === blockId && c.outputPort === outputPort);
         
@@ -679,7 +679,7 @@ class BlockEditor {
                     params: block.params
                 };
                 
-                const nextFlow = buildFlow(block.id);
+                const nextFlow = buildFlowFn(block.id);
                 if (nextFlow.length > 0) {
                     flowItem.flow = nextFlow;
                 }
@@ -769,6 +769,9 @@ class BlockEditor {
         this.workspaceBlocks.innerHTML = '';
         this.connectionsGroup.innerHTML = '';
         
+        // 重置块ID计数器
+        this.blockIdCounter = 0;
+        
         // 设置元数据
         document.getElementById('pluginName').value = template.metadata.name;
         document.getElementById('pluginAuthor').value = template.metadata.author;
@@ -818,6 +821,99 @@ class BlockEditor {
     }
     
     toPascal(s) { return s.replace(/(^|[-_])(\w)/g, (_, __, c) => c.toUpperCase()); }
+    
+    // 加载工作流（从JSON文件）
+    loadWorkflow(workflow) {
+        if (!workflow || !workflow.metadata) {
+            this.showToast('无效的工作流文件', 'error');
+            return;
+        }
+        
+        // 清空当前
+        this.blocks = [];
+        this.connections = [];
+        this.workspaceBlocks.innerHTML = '';
+        this.connectionsGroup.innerHTML = '';
+        this.blockIdCounter = 0;
+        
+        // 设置元数据
+        document.getElementById('pluginName').value = workflow.metadata.name || 'my_plugin';
+        document.getElementById('pluginAuthor').value = workflow.metadata.author || 'user';
+        
+        // 加载变量
+        if (workflow.variables) {
+            // TODO: 处理变量
+        }
+        
+        // 加载handlers中的块
+        if (workflow.handlers) {
+            workflow.handlers.forEach(handler => {
+                // 加载触发器
+                if (handler.trigger) {
+                    this.blockIdCounter++;
+                    const triggerInstance = {
+                        id: `block_${this.blockIdCounter}`,
+                        type: handler.trigger.block,
+                        params: handler.trigger.params || {},
+                        x: 100,
+                        y: 50,
+                        width: 220,
+                        height: 80 + (BLOCKS[handler.trigger.block]?.params?.length || 0) * 32
+                    };
+                    this.blocks.push(triggerInstance);
+                    this.renderBlock(triggerInstance);
+                    
+                    // 递归加载flow
+                    this.loadFlowBlocks(handler.flow, triggerInstance.id);
+                }
+            });
+        }
+        
+        this.updateConnections();
+        this.updateBlockCount();
+        this.hideEmptyState();
+        this.saveState();
+        this.showToast('工作流加载成功！');
+    }
+    
+    // 递归加载flow块
+    loadFlowBlocks(flow, parentId, outputPort = 'flow') {
+        if (!flow || !Array.isArray(flow)) return;
+        
+        flow.forEach(item => {
+            this.blockIdCounter++;
+            const instance = {
+                id: `block_${this.blockIdCounter}`,
+                type: item.block,
+                params: item.params || {},
+                x: 100,
+                y: this.blocks.length * 100 + 50,
+                width: 220,
+                height: 80 + (BLOCKS[item.block]?.params?.length || 0) * 32
+            };
+            this.blocks.push(instance);
+            this.renderBlock(instance);
+            
+            // 创建连接
+            this.connections.push({
+                from: parentId,
+                to: instance.id,
+                outputPort: outputPort
+            });
+            
+            // 处理子flow
+            if (item.flow && Array.isArray(item.flow)) {
+                this.loadFlowBlocks(item.flow, instance.id, 'flow');
+            }
+            
+            // 处理branches（逻辑块）
+            if (item.branches) {
+                Object.entries(item.branches).forEach(([port, branchFlow]) => {
+                    this.loadFlowBlocks(branchFlow, instance.id, port);
+                });
+            }
+        });
+    }
 }
 
 // 全局函数
@@ -889,9 +985,11 @@ function closeWelcomeModal() {
 }
 
 // 选择模板
-function selectTemplate(name) {
+function selectTemplate(name, event) {
     document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
-    event.currentTarget.classList.add('selected');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('selected');
+    }
     editor.loadTemplate(name);
     closeWelcomeModal();
 }
