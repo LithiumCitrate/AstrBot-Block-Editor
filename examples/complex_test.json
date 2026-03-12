@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "name": "complex_plugin",
+    "display_name": "Complex Plugin",
+    "author": "Test",
+    "description": "测试条件、循环、异常处理",
+    "version": "1.0.0"
+  },
+  "handlers": [
+    {
+      "id": "h1",
+      "trigger": {"block": "trigger.command", "params": {"command": "check"}},
+      "flow": [
+        {
+          "id": "cond1",
+          "block": "logic.if",
+          "params": {"condition": "{sender_id} == 'admin'"},
+          "branches": {
+            "true": [
+              {"id": "b1", "block": "action.reply_text", "params": {"text": "管理员你好"}}
+            ],
+            "false": [
+              {"id": "b2", "block": "action.reply_text", "params": {"text": "普通用户"}}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "h2",
+      "trigger": {"block": "trigger.command", "params": {"command": "loop"}},
+      "flow": [
+        {
+          "id": "loop1",
+          "block": "logic.for_each",
+          "params": {"items": "['a', 'b', 'c']", "item_var": "item"},
+          "branches": {
+            "loop": [
+              {"id": "b1", "block": "action.reply_text", "params": {"text": "Item: {item}"}}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "h3",
+      "trigger": {"block": "trigger.command", "params": {"command": "try"}},
+      "flow": [
+        {
+          "id": "try1",
+          "block": "logic.try_catch",
+          "params": {},
+          "branches": {
+            "try": [
+              {"id": "b1", "block": "util.variable", "params": {"operation": "set", "name": "result", "value": "1"}},
+              {"id": "b2", "block": "action.reply_text", "params": {"text": "成功: {result}"}}
+            ],
+            "catch": [
+              {"id": "b3", "block": "action.reply_text", "params": {"text": "出错了"}}
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

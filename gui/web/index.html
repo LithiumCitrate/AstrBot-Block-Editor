@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstrBot Block Editor</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --bg-glass: rgba(51, 65, 85, 0.4);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(148, 163, 184, 0.1);
+            --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            --radius: 16px;
+            --radius-sm: 8px;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e293b 50%, #0f172a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .bg-decoration {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .bg-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            animation: float 20s ease-in-out infinite;
+        }
+        
+        .bg-blob-1 { width: 600px; height: 600px; background: var(--primary); top: -200px; left: -200px; }
+        .bg-blob-2 { width: 500px; height: 500px; background: var(--accent); bottom: -150px; right: -150px; animation-delay: -10s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, 30px) scale(1.1); }
+        }
+        
+        .app-container { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+        
+        .topbar {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            gap: 16px;
+        }
+        
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; }
+        .logo-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+        }
+        
+        .topbar-divider { width: 1px; height: 24px; background: var(--border); }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--bg-glass);
+            color: var(--text-secondary);
+        }
+        
+        .btn:hover { background: rgba(99, 102, 241, 0.2); color: var(--text-primary); transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+        .btn-primary:hover { background: linear-gradient(135deg, var(--primary-light), var(--primary)); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5); }
+        .btn-success { background: linear-gradient(135deg, var(--success), #059669); color: white; }
+        
+        .plugin-meta { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+        
+        .input-field {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        
+        .input-field:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+        .input-field::placeholder { color: var(--text-muted); }
+        
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+        
+        .sidebar {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+        }
+        
+        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+        
+        .category-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+        
+        .pill {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+        }
+        
+        .pill:hover { border-color: var(--border); transform: scale(1.02); }
+        .pill.active { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; }
+        .pill-trigger { border-left: 3px solid var(--success); }
+        .pill-action { border-left: 3px solid var(--primary); }
+        .pill-logic { border-left: 3px solid var(--warning); }
+        .pill-util { border-left: 3px solid var(--accent); }
+        
+        .blocks-container { flex: 1; overflow-y: auto; padding: 12px; }
+        .blocks-container::-webkit-scrollbar { width: 6px; }
+        .blocks-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        
+        .block-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .block-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--block-color, var(--primary)); }
+        .block-card:hover { transform: translateX(4px); border-color: var(--block-color, var(--primary)); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+        .block-card:active { cursor: grabbing; transform: scale(0.98); }
+        
+        .block-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .block-icon { width: 28px; height: 28px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 14px; background: var(--block-color, var(--primary)); }
+        .block-name { font-size: 13px; font-weight: 600; }
+        .block-type { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+        .block-params { display: flex; flex-wrap: wrap; gap: 4px; }
+        .param-tag { padding: 2px 8px; background: var(--bg-glass); border-radius: 4px; font-size: 10px; color: var(--text-secondary); }
+        
+        .workspace { flex: 1; position: relative; overflow: hidden; }
+        
+        .workspace-grid {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .workspace-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .workspace-blocks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        .ws-block {
+            position: absolute;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            min-width: 220px;
+            cursor: move;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            box-shadow: var(--shadow);
+        }
+        
+        .ws-block:hover { border-color: var(--block-color, var(--primary)); }
+        .ws-block.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary), var(--shadow); }
+        .ws-block.dragging { opacity: 0.9; z-index: 1000; }
+        
+        .ws-block-header {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(135deg, var(--block-color, var(--primary)), transparent);
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+        
+        .ws-block-icon { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; background: rgba(255,255,255,0.2); }
+        .ws-block-title { font-size: 13px; font-weight: 600; color: white; }
+        .ws-block-content { padding: 12px 16px; }
+        
+        .ws-param { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .ws-param:last-child { margin-bottom: 0; }
+        .ws-param-label { font-size: 11px; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+        .ws-param-value { font-size: 12px; color: var(--text-primary); background: var(--bg-glass); padding: 4px 8px; border-radius: 4px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .connection-line { stroke: url(#connectionGradient); stroke-width: 2; fill: none; pointer-events: none; }
+        
+        .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-muted); }
+        .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-text { font-size: 16px; margin-bottom: 8px; }
+        .empty-hint { font-size: 13px; }
+        
+        .properties-panel {
+            width: 320px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-section { border-bottom: 1px solid var(--border); }
+        .panel-header { display: flex; align-items: center; gap: 8px; padding: 14px 16px; background: var(--bg-card); }
+        .panel-title { font-size: 13px; font-weight: 600; }
+        .panel-content { padding: 12px 16px; max-height: 250px; overflow-y: auto; }
+        
+        .handler-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+        
+        .handler-tab {
+            padding: 6px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .handler-tab:hover { border-color: var(--primary); }
+        .handler-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+        
+        .prop-group { margin-bottom: 16px; }
+        .prop-label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .prop-input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        
+        .prop-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+        
+        .prop-select {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        
+        .btn-delete { width: 100%; margin-top: 12px; background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-delete:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        
+        .code-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        .code-content { flex: 1; background: #0d1117; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: #c9d1d9; overflow: auto; white-space: pre; }
+        .code-content::-webkit-scrollbar { width: 8px; height: 8px; }
+        .code-content::-webkit-scrollbar-track { background: #161b22; }
+        .code-content::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        
+        .statusbar { display: flex; align-items: center; padding: 6px 16px; background: var(--bg-glass); backdrop-filter: blur(10px); border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted); gap: 16px; }
+        .status-item { display: flex; align-items: center; gap: 4px; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+    </style>
+</head>
+<body>
+    <div class="bg-decoration">
+        <div class="bg-blob bg-blob-1"></div>
+        <div class="bg-blob bg-blob-2"></div>
+    </div>
+    
+    <div class="app-container">
+        <div class="topbar">
+            <div class="logo">
+                <div class="logo-icon">🧩</div>
+                <span>Block Editor</span>
+            </div>
+            <div class="topbar-divider"></div>
+            <button class="btn" onclick="newProject()">📁 新建</button>
+            <button class="btn" onclick="openProject()">📂 打开</button>
+            <button class="btn" onclick="saveProject()">💾 保存</button>
+            <div class="topbar-divider"></div>
+            <button class="btn btn-primary" onclick="compileCode()">▶ 编译预览</button>
+            <button class="btn btn-success" onclick="exportPlugin()">📦 导出</button>
+            <button class="btn" onclick="addHandler()">➕ Handler</button>
+            <div class="plugin-meta">
+                <input type="text" class="input-field" id="pluginName" placeholder="插件名称" value="my_plugin" style="width: 120px;">
+                <input type="text" class="input-field" id="pluginAuthor" placeholder="作者" value="user" style="width: 100px;">
+            </div>
+        </div>
+        
+        <div class="main-layout">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">行为块库</div>
+                    <div class="category-pills" id="categoryPills">
+                        <div class="pill pill-trigger active" data-category="trigger">触发器</div>
+                        <div class="pill pill-action" data-category="action">动作</div>
+                        <div class="pill pill-logic" data-category="logic">逻辑</div>
+                        <div class="pill pill-util" data-category="util">工具</div>
+                    </div>
+                </div>
+                <div class="blocks-container" id="blocksContainer"></div>
+            </div>
+            
+            <div class="workspace" id="workspace">
+                <div class="workspace-grid"></div>
+                <svg class="workspace-canvas" id="workspaceCanvas">
+                    <defs>
+                        <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.8" />
+                            <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:0.8" />
+                        </linearGradient>
+                    </defs>
+                    <g id="connectionsGroup"></g>
+                </svg>
+                <div class="workspace-blocks" id="workspaceBlocks"></div>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">✨</div>
+                    <div class="empty-text">开始搭建你的插件</div>
+                    <div class="empty-hint">从左侧拖拽块到此处</div>
+                </div>
+            </div>
+            
+            <div class="properties-panel">
+                <div class="panel-section">
+                    <div class="panel-header">
+                        <span>📋</span>
+                        <span class="panel-title">Handler</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="handler-tabs" id="handlerTabs">
+                            <div class="handler-tab active">Handler 1</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <div class="panel-header">
+                        <span>⚙️</span>
+                        <span class="panel-title">属性</span>
+                    </div>
+                    <div class="panel-content" id="propertiesContent">
+                        <div style="text-align: center; color: var(--text-muted); padding: 20px 0;">选择块查看属性</div>
+                    </div>
+                </div>
+                <div class="panel-section code-panel">
+                    <div class="panel-header">
+                        <span>💻</span>
+                        <span class="panel-title">代码预览</span>
+                        <button class="btn" style="margin-left: auto; padding: 4px 8px;" onclick="copyCode()">📋</button>
+                    </div>
+                    <div class="code-content" id="codeContent"># 点击"编译预览"生成代码</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="statusbar">
+            <div class="status-item"><div class="status-dot"></div>就绪</div>
+            <div class="status-item">块: <span id="blockCount">0</span></div>
+            <div class="status-item">Handler: <span id="handlerCount">1</span></div>
+        </div>
+    </div>
+
+    <script src="blocks.js"></script>
+    <script src="editor.js"></script>
+</body>
+</html>

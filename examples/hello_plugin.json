@@ -1,0 +1,157 @@
+{
+  "metadata": {
+    "name": "hello_plugin",
+    "display_name": "Hello Plugin",
+    "author": "AstrBot User",
+    "description": "一个简单的问候插件示例",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {
+      "name": "greet_count",
+      "type": "int",
+      "default": 0,
+      "persistent": true,
+      "description": "问候次数计数"
+    }
+  ],
+  "handlers": [
+    {
+      "id": "hello_cmd",
+      "name": "hello",
+      "description": "hello指令处理器",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "hello",
+          "alias": ["hi", "你好"]
+        }
+      },
+      "flow": [
+        {
+          "id": "increment",
+          "block": "util.variable",
+          "params": {
+            "operation": "increment",
+            "name": "greet_count"
+          }
+        },
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {
+            "text": "你好，{sender_name}！这是第{greet_count}次问候。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "time_cmd",
+      "name": "time",
+      "description": "获取当前时间",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "time"
+        }
+      },
+      "flow": [
+        {
+          "id": "get_time",
+          "block": "util.time_now",
+          "params": {
+            "format": "%Y-%m-%d %H:%M:%S",
+            "save_to": "current_time"
+          }
+        },
+        {
+          "id": "reply_time",
+          "block": "action.reply_text",
+          "params": {
+            "text": "当前时间: {current_time}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "random_cmd",
+      "name": "random",
+      "description": "随机数生成",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "random"
+        }
+      },
+      "flow": [
+        {
+          "id": "gen_random",
+          "block": "util.random",
+          "params": {
+            "mode": "int",
+            "min": 1,
+            "max": 100,
+            "save_to": "rand_num"
+          }
+        },
+        {
+          "id": "reply_random",
+          "block": "action.reply_text",
+          "params": {
+            "text": "随机数: {rand_num}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin_only",
+      "name": "admin_cmd",
+      "description": "管理员专属指令",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {
+          "command": "admin"
+        },
+        "filters": [
+          {
+            "block": "trigger.permission",
+            "params": {
+              "permission": "ADMIN"
+            }
+          }
+        ]
+      },
+      "flow": [
+        {
+          "id": "reply_admin",
+          "block": "action.reply_text",
+          "params": {
+            "text": "你好，管理员！"
+          }
+        }
+      ]
+    },
+    {
+      "id": "keyword_hello",
+      "name": "keyword_handler",
+      "description": "关键词触发示例",
+      "trigger": {
+        "block": "trigger.keyword",
+        "params": {
+          "keywords": ["你好", "hello", "hi"],
+          "match_all": false,
+          "case_sensitive": false
+        }
+      },
+      "flow": [
+        {
+          "id": "reply_keyword",
+          "block": "action.reply_text",
+          "params": {
+            "text": "检测到问候关键词！"
+          }
+        }
+      ]
+    }
+  ]
+}

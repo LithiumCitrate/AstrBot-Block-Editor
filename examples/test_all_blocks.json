@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "name": "test_plugin",
+    "display_name": "Test Plugin",
+    "author": "Test",
+    "description": "测试所有块类型",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {"name": "counter", "type": "int", "default": 0},
+    {"name": "user_list", "type": "list", "default": []}
+  ],
+  "handlers": [
+    {
+      "id": "h1",
+      "trigger": {"block": "trigger.command", "params": {"command": "test"}},
+      "flow": [
+        {"id": "b1", "block": "util.get_sender_info", "params": {"info_type": "id", "save_to": "uid"}},
+        {"id": "b2", "block": "util.get_sender_info", "params": {"info_type": "name", "save_to": "uname"}},
+        {"id": "b3", "block": "util.time_now", "params": {"save_to": "now"}},
+        {"id": "b4", "block": "util.random", "params": {"mode": "int", "min": 1, "max": 100, "save_to": "rnd"}},
+        {"id": "b5", "block": "action.reply_text", "params": {"text": "ID: {uid}, Name: {uname}, Time: {now}, Random: {rnd}"}}
+      ]
+    },
+    {
+      "id": "h2",
+      "trigger": {"block": "trigger.regex", "params": {"pattern": "^dice(\\d+)$"}},
+      "flow": [
+        {"id": "b1", "block": "util.random", "params": {"mode": "int", "min": 1, "max": 6, "save_to": "dice"}},
+        {"id": "b2", "block": "action.reply_text", "params": {"text": "骰子结果: {dice}"}}
+      ]
+    },
+    {
+      "id": "h3",
+      "trigger": {"block": "trigger.command", "params": {"command": "inc"}},
+      "flow": [
+        {"id": "b1", "block": "util.variable", "params": {"operation": "increment", "name": "counter"}},
+        {"id": "b2", "block": "action.reply_text", "params": {"text": "计数器: {counter}"}}
+      ]
+    },
+    {
+      "id": "h4",
+      "trigger": {"block": "trigger.command", "params": {"command": "image"}},
+      "flow": [
+        {"id": "b1", "block": "action.reply_image", "params": {"source_type": "url", "url": "https://example.com/test.png"}}
+      ]
+    },
+    {
+      "id": "h5",
+      "trigger": {"block": "trigger.command", "params": {"command": "delay"}},
+      "flow": [
+        {"id": "b1", "block": "action.delay", "params": {"seconds": 2}},
+        {"id": "b2", "block": "action.reply_text", "params": {"text": "延迟2秒后回复"}}
+      ]
+    },
+    {
+      "id": "h6",
+      "trigger": {"block": "trigger.command", "params": {"command": "stop"}},
+      "flow": [
+        {"id": "b1", "block": "action.reply_text", "params": {"text": "停止传播"}},
+        {"id": "b2", "block": "action.stop_event"}
+      ]
+    },
+    {
+      "id": "h7",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "admin"},
+        "filters": [{"block": "trigger.permission", "params": {"permission": "ADMIN"}}]
+      },
+      "flow": [
+        {"id": "b1", "block": "action.reply_text", "params": {"text": "管理员命令"}}
+      ]
+    },
+    {
+      "id": "h8",
+      "trigger": {"block": "trigger.keyword", "params": {"keywords": ["test", "测试"], "case_sensitive": false}},
+      "flow": [
+        {"id": "b1", "block": "action.reply_text", "params": {"text": "关键词触发"}}
+      ]
+    },
+    {
+      "id": "h9",
+      "trigger": {"block": "trigger.command", "params": {"command": "log"}},
+      "flow": [
+        {"id": "b1", "block": "util.log", "params": {"level": "info", "message": "用户 {sender_id} 执行了log命令"}},
+        {"id": "b2", "block": "action.reply_text", "params": {"text": "已记录日志"}}
+      ]
+    },
+    {
+      "id": "h10",
+      "trigger": {"block": "trigger.command", "params": {"command": "chain"}},
+      "flow": [
+        {"id": "b1", "block": "action.reply_chain", "params": {"components": [
+          {"type": "text", "content": "Hello "},
+          {"type": "at", "content": "123456"},
+          {"type": "text", "content": "!"}
+        ]}}
+      ]
+    }
+  ]
+}

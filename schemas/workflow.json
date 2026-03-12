@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AstrBot Workflow Definition",
+  "description": "工作流定义Schema - 描述用户组合的块结构",
+  "type": "object",
+  "required": ["metadata", "handlers"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["name", "author", "description", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "插件名称",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "display_name": {
+          "type": "string",
+          "description": "显示名称"
+        },
+        "author": {
+          "type": "string",
+          "description": "作者"
+        },
+        "description": {
+          "type": "string",
+          "description": "插件描述"
+        },
+        "version": {
+          "type": "string",
+          "description": "版本号",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "repo": {
+          "type": "string",
+          "description": "仓库地址"
+        },
+        "logo": {
+          "type": "string",
+          "description": "Logo路径"
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "插件配置Schema",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "description"],
+            "properties": {
+              "name": { "type": "string" },
+              "type": { 
+                "type": "string",
+                "enum": ["string", "text", "int", "float", "bool", "object", "list"]
+              },
+              "description": { "type": "string" },
+              "default": {},
+              "hint": { "type": "string" },
+              "obvious_hint": { "type": "boolean" },
+              "options": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "invisible": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "description": "插件变量定义",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "变量名",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["string", "int", "float", "bool", "list", "dict"],
+            "description": "变量类型"
+          },
+          "default": {
+            "description": "默认值"
+          },
+          "persistent": {
+            "type": "boolean",
+            "description": "是否持久化存储",
+            "default": false
+          },
+          "description": {
+            "type": "string",
+            "description": "变量描述"
+          }
+        }
+      }
+    },
+    "imports": {
+      "type": "array",
+      "description": "额外的导入模块",
+      "items": {
+        "type": "object",
+        "properties": {
+          "module": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "init_code": {
+      "type": "string",
+      "description": "初始化代码（在__init__中执行）"
+    },
+    "terminate_code": {
+      "type": "string",
+      "description": "终止代码（在terminate中执行）"
+    },
+    "handlers": {
+      "type": "array",
+      "description": "处理器列表",
+      "items": {
+        "type": "object",
+        "required": ["id", "trigger"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Handler唯一标识"
+          },
+          "name": {
+            "type": "string",
+            "description": "方法名（可选，默认使用id）"
+          },
+          "description": {
+            "type": "string",
+            "description": "Handler描述"
+          },
+          "trigger": {
+            "type": "object",
+            "description": "触发器配置",
+            "required": ["block"],
+            "properties": {
+              "block": {
+                "type": "string",
+                "description": "触发块类型"
+              },
+              "params": {
+                "type": "object",
+                "description": "触发块参数"
+              },
+              "filters": {
+                "type": "array",
+                "description": "额外的过滤器",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "block": { "type": "string" },
+                    "params": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "flow": {
+            "type": "array",
+            "description": "执行流程（块列表）",
+            "items": {
+              "$ref": "#/definitions/block_instance"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "block_instance": {
+      "type": "object",
+      "required": ["id", "block"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "块实例ID"
+        },
+        "block": {
+          "type": "string",
+          "description": "块类型"
+        },
+        "params": {
+          "type": "object",
+          "description": "块参数"
+        },
+        "inputs": {
+          "type": "object",
+          "description": "输入连接",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "branches": {
+          "type": "object",
+          "description": "分支（用于条件块）",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/block_instance"
+            }
+          }
+        }
+      }
+    }
+  }
+}

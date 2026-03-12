@@ -1,0 +1,1161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AstrBot Block Definitions",
+  "description": "所有可用行为块的定义",
+  "blocks": {
+    "trigger.command": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "指令触发",
+      "description": "当用户发送指定指令时触发",
+      "icon": "terminal",
+      "color": "#4CAF50",
+      "params": {
+        "command": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "指令名称（不含/前缀）",
+          "validation": {
+            "pattern": "^[a-zA-Z0-9_]+$",
+            "message": "指令只能包含字母、数字和下划线"
+          }
+        },
+        "alias": {
+          "type": "array",
+          "items": "string",
+          "required": false,
+          "default": [],
+          "description": "指令别名列表"
+        },
+        "description": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Handler描述（会显示在帮助中）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "message_str": {
+          "type": "string",
+          "description": "消息文本内容"
+        },
+        "sender_id": {
+          "type": "string",
+          "description": "发送者ID"
+        },
+        "sender_name": {
+          "type": "string",
+          "description": "发送者昵称"
+        }
+      },
+      "code_template": "@filter.command(\"{{params.command}}\"{% if params.alias %}, alias={{params.alias}}{% endif %})\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''{{params.description}}'''\n    {{handler_body}}"
+    },
+
+    "trigger.regex": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "正则触发",
+      "description": "使用正则表达式匹配消息",
+      "icon": "regex",
+      "color": "#4CAF50",
+      "params": {
+        "pattern": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "正则表达式"
+        },
+        "description": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "Handler描述"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "匹配后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "match_groups": {
+          "type": "array",
+          "items": "string",
+          "description": "正则捕获组"
+        }
+      },
+      "code_template": "@filter.regex(\"{{params.pattern}}\")\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''{{params.description}}'''\n    {{handler_body}}"
+    },
+
+    "trigger.keyword": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "关键词触发",
+      "description": "当消息包含指定关键词时触发",
+      "icon": "key",
+      "color": "#4CAF50",
+      "params": {
+        "keywords": {
+          "type": "array",
+          "items": "string",
+          "required": true,
+          "default": [],
+          "description": "关键词列表"
+        },
+        "match_all": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "是否需要匹配所有关键词"
+        },
+        "case_sensitive": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "是否区分大小写"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "matched_keyword": {
+          "type": "string",
+          "description": "匹配到的关键词"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''关键词触发处理器'''\n    msg = event.message_str{% if not params.case_sensitive %}.lower(){% endif %}\n    keywords = {{params.keywords}}\n    matched = None\n    {% if params.match_all %}\n    if all(kw in msg for kw in keywords):\n        matched = keywords\n    {% else %}\n    for kw in keywords:\n        if kw in msg:\n            matched = kw\n            break\n    {% endif %}\n    if matched:\n        {{handler_body}}"
+    },
+
+    "trigger.event_message_type": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "消息类型过滤",
+      "description": "按消息类型（群聊/私聊）过滤",
+      "icon": "filter",
+      "color": "#4CAF50",
+      "params": {
+        "message_type": {
+          "type": "enum",
+          "enum": ["ALL", "PRIVATE_MESSAGE", "GROUP_MESSAGE"],
+          "required": true,
+          "default": "ALL",
+          "description": "消息类型"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "is_private": {
+          "type": "boolean",
+          "description": "是否为私聊"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.{{params.message_type}})\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.platform": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "平台过滤",
+      "description": "按消息平台过滤",
+      "icon": "platform",
+      "color": "#4CAF50",
+      "params": {
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "enum",
+            "enum": ["AIOCQHTTP", "QQOFFICIAL", "GEWECHAT", "TELEGRAM", "FEISHU", "DINGTALK", "ALL"]
+          },
+          "required": true,
+          "default": ["ALL"],
+          "description": "平台列表"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "platform_name": {
+          "type": "string",
+          "description": "平台名称"
+        }
+      },
+      "code_template": "@filter.platform_adapter_type({% for p in params.platforms %}filter.PlatformAdapterType.{{p}}{% if not loop.last %} | {% endif %}{% endfor %})\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.permission": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "权限过滤",
+      "description": "按用户权限过滤（管理员/普通用户）",
+      "icon": "shield",
+      "color": "#4CAF50",
+      "params": {
+        "permission": {
+          "type": "enum",
+          "enum": ["ADMIN", "MEMBER"],
+          "required": true,
+          "default": "ADMIN",
+          "description": "权限类型"
+        },
+        "raise_error": {
+          "type": "boolean",
+          "required": false,
+          "default": true,
+          "description": "无权限时是否提示错误"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        }
+      },
+      "code_template": "@filter.permission_type(filter.PermissionType.{{params.permission}}, raise_error={{params.raise_error}})\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    {{handler_body}}"
+    },
+
+    "trigger.on_loaded": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "Bot加载完成",
+      "description": "当AstrBot加载完成时触发",
+      "icon": "rocket",
+      "color": "#4CAF50",
+      "params": {},
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        }
+      },
+      "code_template": "@filter.on_astrbot_loaded()\nasync def {{handler_name}}(self):\n    {{handler_body}}"
+    },
+
+    "trigger.on_llm_request": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "LLM请求钩子",
+      "description": "在LLM请求前触发，可修改请求参数",
+      "icon": "brain",
+      "color": "#4CAF50",
+      "params": {},
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "request": {
+          "type": "ref",
+          "ref_type": "ProviderRequest",
+          "description": "请求对象"
+        }
+      },
+      "code_template": "@filter.on_llm_request()\nasync def {{handler_name}}(self, event: AstrMessageEvent, req: ProviderRequest):\n    {{handler_body}}"
+    },
+
+    "action.reply_text": {
+      "type": "action",
+      "category": "action",
+      "display_name": "回复文本",
+      "description": "回复一条纯文本消息",
+      "icon": "message",
+      "color": "#2196F3",
+      "params": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "回复的文本内容",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "yield event.plain_result({{params.text | render_template}})"
+    },
+
+    "action.reply_image": {
+      "type": "action",
+      "category": "action",
+      "display_name": "回复图片",
+      "description": "回复一张图片",
+      "icon": "image",
+      "color": "#2196F3",
+      "params": {
+        "source_type": {
+          "type": "enum",
+          "enum": ["url", "file", "variable"],
+          "required": true,
+          "default": "url",
+          "description": "图片来源类型"
+        },
+        "url": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "图片URL（source_type=url时）",
+          "supports_template": true
+        },
+        "file_path": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "本地文件路径（source_type=file时）",
+          "supports_template": true
+        },
+        "variable": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "变量名（source_type=variable时）"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "{% if params.source_type == 'url' %}yield event.image_result({{params.url | render_template}}){% elif params.source_type == 'file' %}yield event.image_result({{params.file_path | render_template}}){% else %}yield event.image_result(self.{{params.variable}}){% endif %}"
+    },
+
+    "action.reply_chain": {
+      "type": "action",
+      "category": "action",
+      "display_name": "回复消息链",
+      "description": "回复包含多种组件的消息链",
+      "icon": "list",
+      "color": "#2196F3",
+      "params": {
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "enum",
+                "enum": ["text", "image", "at", "at_all", "face", "reply"]
+              },
+              "content": {
+                "type": "string",
+                "description": "内容（文本/图片URL/At的QQ号等）"
+              }
+            }
+          },
+          "required": true,
+          "default": [],
+          "description": "消息组件列表"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "chain = [\n{% for comp in params.components %}{% if comp.type == 'text %}    Comp.Plain({{comp.content | render_template}}),\n{% elif comp.type == 'image' %}    Comp.Image.fromURL({{comp.content | render_template}}),\n{% elif comp.type == 'at' %}    Comp.At(qq={{comp.content}}),\n{% elif comp.type == 'at_all' %}    Comp.AtAll(),\n{% elif comp.type == 'face' %}    Comp.Face(id={{comp.content}}),\n{% endif %}{% endfor %}\n]\nyield event.chain_result(chain)"
+    },
+
+    "action.send_message": {
+      "type": "action",
+      "category": "action",
+      "display_name": "主动发送消息",
+      "description": "主动向指定会话发送消息",
+      "icon": "send",
+      "color": "#2196F3",
+      "params": {
+        "target_type": {
+          "type": "enum",
+          "enum": ["current", "saved", "specific"],
+          "required": true,
+          "default": "current",
+          "description": "目标会话类型"
+        },
+        "umo": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "目标会话ID（target_type=specific时）"
+        },
+        "umo_variable": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "存储会话ID的变量名（target_type=saved时）"
+        },
+        "message_type": {
+          "type": "enum",
+          "enum": ["text", "image", "chain"],
+          "required": true,
+          "default": "text",
+          "description": "消息类型"
+        },
+        "content": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "消息内容",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "{% if params.target_type == 'current' %}umo = event.unified_msg_origin\n{% elif params.target_type == 'saved' %}umo = self.{{params.umo_variable}}\n{% else %}umo = \"{{params.umo}}\"\n{% endif %}\nfrom astrbot.api.event import MessageChain\nchain = MessageChain().message({{params.content | render_template}})\nawait self.context.send_message(umo, chain)"
+    },
+
+    "action.http_request": {
+      "type": "action",
+      "category": "action",
+      "display_name": "HTTP请求",
+      "description": "发送HTTP请求",
+      "icon": "globe",
+      "color": "#2196F3",
+      "params": {
+        "method": {
+          "type": "enum",
+          "enum": ["GET", "POST", "PUT", "DELETE"],
+          "required": true,
+          "default": "GET",
+          "description": "请求方法"
+        },
+        "url": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "请求URL",
+          "supports_template": true
+        },
+        "headers": {
+          "type": "object",
+          "required": false,
+          "default": {},
+          "description": "请求头"
+        },
+        "body": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "请求体（POST/PUT时）",
+          "supports_template": true
+        },
+        "timeout": {
+          "type": "number",
+          "required": false,
+          "default": 30,
+          "description": "超时时间（秒）"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "保存响应的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "response": {
+          "type": "ref",
+          "ref_type": "HttpResponse",
+          "description": "响应对象"
+        },
+        "status_code": {
+          "type": "number",
+          "description": "状态码"
+        },
+        "body": {
+          "type": "string",
+          "description": "响应体"
+        }
+      },
+      "code_template": "import aiohttp\nasync with aiohttp.ClientSession() as session:\n    {% if params.method == 'GET' %}\n    async with session.get({{params.url | render_template}}, headers={{params.headers}}, timeout={{params.timeout}}) as resp:\n    {% elif params.method == 'POST' %}\n    async with session.post({{params.url | render_template}}, headers={{params.headers}}, data={{params.body | render_template}}, timeout={{params.timeout}}) as resp:\n    {% elif params.method == 'PUT' %}\n    async with session.put({{params.url | render_template}}, headers={{params.headers}}, data={{params.body | render_template}}, timeout={{params.timeout}}) as resp:\n    {% elif params.method == 'DELETE' %}\n    async with session.delete({{params.url | render_template}}, headers={{params.headers}}, timeout={{params.timeout}}) as resp:\n    {% endif %}\n        {{params.save_to}}_status = resp.status\n        {{params.save_to}}_body = await resp.text()"
+    },
+
+    "action.delay": {
+      "type": "action",
+      "category": "action",
+      "display_name": "延时",
+      "description": "等待指定时间",
+      "icon": "clock",
+      "color": "#2196F3",
+      "params": {
+        "seconds": {
+          "type": "number",
+          "required": true,
+          "default": 1,
+          "description": "等待秒数"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "await asyncio.sleep({{params.seconds}})"
+    },
+
+    "action.call_llm": {
+      "type": "action",
+      "category": "action",
+      "display_name": "调用LLM",
+      "description": "调用大语言模型",
+      "icon": "brain",
+      "color": "#2196F3",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "提示词",
+          "supports_template": true
+        },
+        "system_prompt": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "系统提示词"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "llm_response",
+          "description": "保存响应的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "response": {
+          "type": "string",
+          "description": "LLM响应文本"
+        }
+      },
+      "code_template": "prov = self.context.get_using_provider(umo=event.unified_msg_origin)\nif prov:\n    {{params.save_to}} = await prov.text_chat(\n        prompt={{params.prompt | render_template}},\n        system_prompt=\"{{params.system_prompt}}\"\n    )\n    {{params.save_to}}_text = {{params.save_to}}.completion_text"
+    },
+
+    "action.stop_event": {
+      "type": "action",
+      "category": "action",
+      "display_name": "停止事件传播",
+      "description": "停止事件继续传播",
+      "icon": "stop",
+      "color": "#F44336",
+      "params": {},
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {},
+      "code_template": "event.stop_event()"
+    },
+
+    "action.store_umo": {
+      "type": "action",
+      "category": "action",
+      "display_name": "保存会话ID",
+      "description": "保存当前会话ID以便后续主动发送消息",
+      "icon": "save",
+      "color": "#2196F3",
+      "params": {
+        "variable": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "self.{{params.variable}} = event.unified_msg_origin"
+    },
+
+    "logic.if": {
+      "type": "logic",
+      "category": "logic",
+      "display_name": "条件判断",
+      "description": "根据条件执行不同分支",
+      "icon": "branch",
+      "color": "#FF9800",
+      "params": {
+        "condition": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "条件表达式",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "true_flow": {
+          "type": "flow",
+          "description": "条件为真时执行"
+        },
+        "false_flow": {
+          "type": "flow",
+          "description": "条件为假时执行"
+        }
+      },
+      "code_template": "if {{params.condition | render_condition}}:\n    {{true_branch}}\nelse:\n    {{false_branch}}"
+    },
+
+    "logic.switch": {
+      "type": "logic",
+      "category": "logic",
+      "display_name": "多分支判断",
+      "description": "根据多个条件执行不同分支",
+      "icon": "fork",
+      "color": "#FF9800",
+      "params": {
+        "value": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "要判断的值",
+          "supports_template": true
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "match": { "type": "string" },
+              "flow_id": { "type": "string" }
+            }
+          },
+          "required": true,
+          "default": [],
+          "description": "分支列表"
+        },
+        "default_flow_id": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "默认分支ID"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {},
+      "code_template": "_switch_val = {{params.value | render_template}}\n{% for case in params.cases %}{% if loop.first %}if _switch_val == {{case.match}}:\n{% else %}elif _switch_val == {{case.match}}:\n{% endif %}    {{case.flow_id}}\n{% endfor %}{% if params.default_flow_id %}else:\n    {{params.default_flow_id}}\n{% endif %}"
+    },
+
+    "logic.for_each": {
+      "type": "logic",
+      "category": "logic",
+      "display_name": "循环遍历",
+      "description": "遍历列表中的每个元素",
+      "icon": "loop",
+      "color": "#FF9800",
+      "params": {
+        "items": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "要遍历的列表（变量名或表达式）"
+        },
+        "item_var": {
+          "type": "string",
+          "required": true,
+          "default": "item",
+          "description": "循环变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "loop_flow": {
+          "type": "flow",
+          "description": "每次迭代执行的流程"
+        },
+        "item": {
+          "type": "any",
+          "description": "当前元素"
+        },
+        "index": {
+          "type": "number",
+          "description": "当前索引"
+        }
+      },
+      "code_template": "for {{params.item_var}}_idx, {{params.item_var}} in enumerate({{params.items}}):\n    {{loop_body}}"
+    },
+
+    "logic.try_catch": {
+      "type": "logic",
+      "category": "logic",
+      "display_name": "异常处理",
+      "description": "捕获并处理异常",
+      "icon": "shield-alert",
+      "color": "#FF9800",
+      "params": {},
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "try_flow": {
+          "type": "flow",
+          "description": "正常执行的流程"
+        },
+        "catch_flow": {
+          "type": "flow",
+          "description": "异常时执行的流程"
+        },
+        "error": {
+          "type": "ref",
+          "ref_type": "Exception",
+          "description": "异常对象"
+        }
+      },
+      "code_template": "try:\n    {{try_body}}\nexcept Exception as e:\n    logger.error(f\"Error: {e}\")\n    {{catch_body}}"
+    },
+
+    "util.get_sender_info": {
+      "type": "util",
+      "category": "util",
+      "display_name": "获取发送者信息",
+      "description": "获取消息发送者的信息",
+      "icon": "user",
+      "color": "#9C27B0",
+      "params": {
+        "info_type": {
+          "type": "enum",
+          "enum": ["id", "name", "role"],
+          "required": true,
+          "default": "id",
+          "description": "信息类型"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "string",
+          "description": "获取到的值"
+        }
+      },
+      "code_template": "{% if params.info_type == 'id' %}{{params.save_to or '_sender_id'}} = event.get_sender_id(){% elif params.info_type == 'name' %}{{params.save_to or '_sender_name'}} = event.get_sender_name(){% elif params.info_type == 'role' %}{{params.save_to or '_sender_role'}} = event.role{% endif %}"
+    },
+
+    "util.get_group_info": {
+      "type": "util",
+      "category": "util",
+      "display_name": "获取群信息",
+      "description": "获取群聊相关信息",
+      "icon": "users",
+      "color": "#9C27B0",
+      "params": {
+        "info_type": {
+          "type": "enum",
+          "enum": ["id", "name", "member_count"],
+          "required": true,
+          "default": "id",
+          "description": "信息类型"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "string",
+          "description": "获取到的值"
+        }
+      },
+      "code_template": "{% if params.info_type == 'id' %}{{params.save_to or '_group_id'}} = event.get_group_id(){% elif params.info_type == 'name' %}group = await event.get_group()\n{{params.save_to or '_group_name'}} = group.group_name if group else \"\"{% elif params.info_type == 'member_count' %}group = await event.get_group()\n{{params.save_to or '_member_count'}} = group.member_count if group else 0{% endif %}"
+    },
+
+    "util.get_message": {
+      "type": "util",
+      "category": "util",
+      "display_name": "获取消息内容",
+      "description": "获取消息的详细信息",
+      "icon": "message-square",
+      "color": "#9C27B0",
+      "params": {
+        "info_type": {
+          "type": "enum",
+          "enum": ["text", "outline", "type", "has_image"],
+          "required": true,
+          "default": "text",
+          "description": "信息类型"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "string",
+          "description": "获取到的值"
+        }
+      },
+      "code_template": "{% if params.info_type == 'text' %}{{params.save_to or '_msg_text'}} = event.message_str{% elif params.info_type == 'outline' %}{{params.save_to or '_msg_outline'}} = event.get_message_outline(){% elif params.info_type == 'type' %}{{params.save_to or '_msg_type'}} = event.get_message_type(){% elif params.info_type == 'has_image' %}{{params.save_to or '_has_image'}} = any(isinstance(c, Comp.Image) for c in event.get_messages()){% endif %}"
+    },
+
+    "util.random": {
+      "type": "util",
+      "category": "util",
+      "display_name": "随机数",
+      "description": "生成随机数或随机选择",
+      "icon": "shuffle",
+      "color": "#9C27B0",
+      "params": {
+        "mode": {
+          "type": "enum",
+          "enum": ["int", "float", "choice"],
+          "required": true,
+          "default": "int",
+          "description": "随机模式"
+        },
+        "min": {
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "description": "最小值（int/float模式）"
+        },
+        "max": {
+          "type": "number",
+          "required": false,
+          "default": 100,
+          "description": "最大值（int/float模式）"
+        },
+        "choices": {
+          "type": "array",
+          "items": "string",
+          "required": false,
+          "default": [],
+          "description": "选项列表（choice模式）"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "随机结果"
+        }
+      },
+      "code_template": "import random\n{% if params.mode == 'int' %}{{params.save_to or '_random'}} = random.randint({{params.min}}, {{params.max}}){% elif params.mode == 'float' %}{{params.save_to or '_random'}} = random.uniform({{params.min}}, {{params.max}}){% elif params.mode == 'choice' %}{{params.save_to or '_random'}} = random.choice({{params.choices}}){% endif %}"
+    },
+
+    "util.time_now": {
+      "type": "util",
+      "category": "util",
+      "display_name": "当前时间",
+      "description": "获取当前时间",
+      "icon": "clock",
+      "color": "#9C27B0",
+      "params": {
+        "format": {
+          "type": "string",
+          "required": false,
+          "default": "%Y-%m-%d %H:%M:%S",
+          "description": "时间格式"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "string",
+          "description": "格式化后的时间"
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Unix时间戳"
+        }
+      },
+      "code_template": "from datetime import datetime\n{{params.save_to or '_time'}} = datetime.now().strftime(\"{{params.format}}\")\n{{params.save_to or '_time'}}_ts = int(datetime.now().timestamp())"
+    },
+
+    "util.variable": {
+      "type": "util",
+      "category": "util",
+      "display_name": "变量操作",
+      "description": "设置或获取变量",
+      "icon": "variable",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["set", "get", "increment", "decrement", "append"],
+          "required": true,
+          "default": "set",
+          "description": "操作类型"
+        },
+        "name": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "变量名"
+        },
+        "value": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "值（set/append时）",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "变量值"
+        }
+      },
+      "code_template": "{% if params.operation == 'set' %}self.{{params.name}} = {{params.value | render_template}}{% elif params.operation == 'get' %}_var_{{params.name}} = self.{{params.name}}{% elif params.operation == 'increment' %}self.{{params.name}} = self.{{params.name}} + 1{% elif params.operation == 'decrement' %}self.{{params.name}} = self.{{params.name}} - 1{% elif params.operation == 'append' %}self.{{params.name}}.append({{params.value | render_template}}){% endif %}"
+    },
+
+    "util.log": {
+      "type": "util",
+      "category": "util",
+      "display_name": "日志输出",
+      "description": "输出日志信息",
+      "icon": "file-text",
+      "color": "#9C27B0",
+      "params": {
+        "level": {
+          "type": "enum",
+          "enum": ["debug", "info", "warning", "error"],
+          "required": true,
+          "default": "info",
+          "description": "日志级别"
+        },
+        "message": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "日志内容",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "logger.{{params.level}}({{params.message | render_template}})"
+    }
+  }
+}
