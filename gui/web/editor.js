@@ -593,9 +593,108 @@ class BlockEditor {
     
     updateHandlerTabs() {
         document.getElementById('handlerTabs').innerHTML = this.handlers.map((h, i) =>
-            `<div class="handler-tab ${i === this.currentHandler ? 'active' : ''}" onclick="editor.switchHandler(${i})">${h.name}</div>`
+            `<div class="handler-tab ${i === this.currentHandler ? 'active' : ''}" onclick="editor.switchHandler(${i})" oncontextmenu="event.preventDefault(); editor.showHandlerContextMenu(event, ${i})">${h.name}</div>`
         ).join('');
         document.getElementById('handlerCount').textContent = this.handlers.length;
+    }
+    
+    // 显示Handler右键菜单
+    showHandlerContextMenu(event, index) {
+        // 移除已存在的菜单
+        document.getElementById('handlerContextMenu')?.remove();
+        
+        // 创建菜单
+        const menu = document.createElement('div');
+        menu.id = 'handlerContextMenu';
+        menu.style.cssText = `
+            position: fixed;
+            left: ${event.clientX}px;
+            top: ${event.clientY}px;
+            background: var(--bg-card, #1e1e2e);
+            border: 1px solid var(--border, #313244);
+            border-radius: 8px;
+            padding: 4px 0;
+            min-width: 120px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+        `;
+        
+        // 删除选项
+        const deleteItem = document.createElement('div');
+        deleteItem.textContent = '🗑️ 删除';
+        deleteItem.style.cssText = `
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #f38ba8;
+            font-size: 13px;
+        `;
+        deleteItem.onmouseenter = () => deleteItem.style.background = 'rgba(243, 139, 168, 0.1)';
+        deleteItem.onmouseleave = () => deleteItem.style.background = 'transparent';
+        deleteItem.onclick = () => {
+            this.deleteHandler(index);
+            menu.remove();
+        };
+        
+        // 重命名选项
+        const renameItem = document.createElement('div');
+        renameItem.textContent = '✏️ 重命名';
+        renameItem.style.cssText = `
+            padding: 8px 16px;
+            cursor: pointer;
+            color: var(--text, #cdd6f4);
+            font-size: 13px;
+        `;
+        renameItem.onmouseenter = () => renameItem.style.background = 'rgba(255,255,255,0.05)';
+        renameItem.onmouseleave = () => renameItem.style.background = 'transparent';
+        renameItem.onclick = () => {
+            this.renameHandler(index);
+            menu.remove();
+        };
+        
+        menu.appendChild(renameItem);
+        menu.appendChild(deleteItem);
+        document.body.appendChild(menu);
+        
+        // 点击其他地方关闭菜单
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    }
+    
+    // 删除Handler
+    deleteHandler(index) {
+        if (this.handlers.length <= 1) {
+            this.showToast('至少需要保留一个Handler', 'warning');
+            return;
+        }
+        
+        this.saveState();
+        this.handlers.splice(index, 1);
+        
+        // 调整当前选中的handler
+        if (this.currentHandler >= this.handlers.length) {
+            this.currentHandler = this.handlers.length - 1;
+        } else if (this.currentHandler > index) {
+            this.currentHandler--;
+        }
+        
+        this.updateHandlerTabs();
+        this.showToast('Handler已删除');
+    }
+    
+    // 重命名Handler
+    renameHandler(index) {
+        const currentName = this.handlers[index].name;
+        const newName = prompt('输入新的Handler名称:', currentName);
+        if (newName && newName.trim()) {
+            this.handlers[index].name = newName.trim();
+            this.updateHandlerTabs();
+            this.showToast('Handler已重命名');
+        }
     }
     
     buildWorkflowJSON() {

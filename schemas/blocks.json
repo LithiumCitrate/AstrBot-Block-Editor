@@ -2,6 +2,79 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AstrBot Block Definitions",
   "description": "所有可用行为块的定义",
+  "categories": {
+    "trigger": {
+      "display_name": "触发器",
+      "description": "定义插件何时被触发执行",
+      "icon": "zap",
+      "color": "#4CAF50",
+      "subcategories": {}
+    },
+    "action": {
+      "display_name": "行为",
+      "description": "执行具体操作的块",
+      "icon": "play",
+      "color": "#2196F3",
+      "subcategories": {
+        "message_reply": {
+          "display_name": "消息回复",
+          "description": "回复消息相关操作",
+          "icon": "message-circle",
+          "color": "#2196F3"
+        },
+        "message_send": {
+          "display_name": "主动发送",
+          "description": "主动发送消息到指定会话",
+          "icon": "send",
+          "color": "#06B6D4"
+        },
+        "message_manage": {
+          "display_name": "消息管理",
+          "description": "消息撤回等管理操作",
+          "icon": "file-x",
+          "color": "#F59E0B"
+        },
+        "http_api": {
+          "display_name": "HTTP/API",
+          "description": "HTTP请求和API调用",
+          "icon": "globe",
+          "color": "#8B5CF6"
+        },
+        "llm_ai": {
+          "display_name": "LLM/AI",
+          "description": "大语言模型调用",
+          "icon": "brain",
+          "color": "#EC4899"
+        },
+        "group_manage": {
+          "display_name": "群组管理",
+          "description": "群成员管理相关操作",
+          "icon": "users",
+          "color": "#EF4444"
+        },
+        "flow_control": {
+          "display_name": "流程控制",
+          "description": "控制执行流程的块",
+          "icon": "git-branch",
+          "color": "#6366F1"
+        }
+      }
+    },
+    "logic": {
+      "display_name": "逻辑",
+      "description": "条件判断和循环控制",
+      "icon": "git-merge",
+      "color": "#FF9800",
+      "subcategories": {}
+    },
+    "util": {
+      "display_name": "工具",
+      "description": "实用工具块",
+      "icon": "tool",
+      "color": "#9C27B0",
+      "subcategories": {}
+    }
+  },
   "blocks": {
     "trigger.command": {
       "type": "trigger",
@@ -701,6 +774,7 @@
     "action.reply_text": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_reply",
       "display_name": "回复文本",
       "description": "回复一条纯文本消息",
       "icon": "message",
@@ -732,6 +806,7 @@
     "action.reply_image": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_reply",
       "display_name": "回复图片",
       "description": "回复一张图片",
       "icon": "image",
@@ -783,6 +858,7 @@
     "action.reply_chain": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_reply",
       "display_name": "回复消息链",
       "description": "回复包含多种组件的消息链",
       "icon": "list",
@@ -826,6 +902,7 @@
     "action.send_message": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_send",
       "display_name": "主动发送消息",
       "description": "主动向指定会话发送消息",
       "icon": "send",
@@ -883,6 +960,7 @@
     "action.http_request": {
       "type": "action",
       "category": "action",
+      "subcategory": "http_api",
       "display_name": "HTTP请求",
       "description": "发送HTTP请求",
       "icon": "globe",
@@ -959,6 +1037,7 @@
     "action.delay": {
       "type": "action",
       "category": "action",
+      "subcategory": "flow_control",
       "display_name": "延时",
       "description": "等待指定时间",
       "icon": "clock",
@@ -989,6 +1068,7 @@
     "action.call_llm": {
       "type": "action",
       "category": "action",
+      "subcategory": "llm_ai",
       "display_name": "调用LLM",
       "description": "调用大语言模型",
       "icon": "brain",
@@ -1036,6 +1116,7 @@
     "action.stop_event": {
       "type": "action",
       "category": "action",
+      "subcategory": "flow_control",
       "display_name": "停止事件传播",
       "description": "停止事件继续传播",
       "icon": "stop",
@@ -1054,6 +1135,7 @@
     "action.store_umo": {
       "type": "action",
       "category": "action",
+      "subcategory": "flow_control",
       "display_name": "保存会话ID",
       "description": "保存当前会话ID以便后续主动发送消息",
       "icon": "save",
@@ -1084,6 +1166,7 @@
     "action.parallel": {
       "type": "action",
       "category": "action",
+      "subcategory": "flow_control",
       "display_name": "并行执行",
       "description": "同时执行多个分支",
       "icon": "git-branch",
@@ -1637,6 +1720,7 @@
     "action.reply_card": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_reply",
       "display_name": "回复卡片消息",
       "description": "回复一个卡片样式的消息",
       "icon": "layout",
@@ -1687,6 +1771,7 @@
     "action.goto": {
       "type": "action",
       "category": "action",
+      "subcategory": "flow_control",
       "display_name": "跳转到标签",
       "description": "跳转到指定的标签位置继续执行",
       "icon": "navigation",
@@ -1717,6 +1802,7 @@
     "action.label": {
       "type": "action",
       "category": "action",
+      "subcategory": "flow_control",
       "display_name": "定义标签",
       "description": "定义一个标签位置，供跳转使用",
       "icon": "bookmark",
@@ -1812,6 +1898,7 @@
     "action.reply_face": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_reply",
       "display_name": "回复表情",
       "description": "回复一个QQ表情",
       "icon": "smile",
@@ -1842,6 +1929,7 @@
     "action.delete_msg": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_manage",
       "display_name": "撤回消息",
       "description": "撤回指定的消息",
       "icon": "trash-2",
@@ -1873,6 +1961,7 @@
     "action.set_group_card": {
       "type": "action",
       "category": "action",
+      "subcategory": "group_manage",
       "display_name": "设置群名片",
       "description": "设置群成员的群名片",
       "icon": "user-cog",
@@ -1911,6 +2000,7 @@
     "action.kick_member": {
       "type": "action",
       "category": "action",
+      "subcategory": "group_manage",
       "display_name": "踢出成员",
       "description": "将成员踢出群聊（需要管理员权限）",
       "icon": "user-minus",
@@ -1948,6 +2038,7 @@
     "action.mute_member": {
       "type": "action",
       "category": "action",
+      "subcategory": "group_manage",
       "display_name": "禁言成员",
       "description": "禁言群成员（需要管理员权限）",
       "icon": "volume-x",
@@ -1985,6 +2076,7 @@
     "action.unmute_member": {
       "type": "action",
       "category": "action",
+      "subcategory": "group_manage",
       "display_name": "解除禁言",
       "description": "解除群成员的禁言（需要管理员权限）",
       "icon": "volume-2",
@@ -2016,6 +2108,7 @@
     "action.set_admin": {
       "type": "action",
       "category": "action",
+      "subcategory": "group_manage",
       "display_name": "设置管理员",
       "description": "设置或取消群管理员（需要群主权限）",
       "icon": "shield",
@@ -2574,6 +2667,7 @@
     "action.send_private": {
       "type": "action",
       "category": "action",
+      "subcategory": "message_send",
       "display_name": "发送私聊",
       "description": "主动发送私聊消息",
       "icon": "mail",
@@ -2619,6 +2713,7 @@
     "action.get_member_list": {
       "type": "action",
       "category": "action",
+      "subcategory": "group_manage",
       "display_name": "获取群成员列表",
       "description": "获取群成员列表信息",
       "icon": "users",
