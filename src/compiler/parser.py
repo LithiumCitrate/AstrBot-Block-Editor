@@ -235,9 +235,9 @@ class WorkflowParser:
                 self.errors.append(f"重复的Handler ID: {handler.id}")
                 valid = False
             handler_ids.add(handler.id)
-            
+
             if not handler.trigger.block_type:
                 self.errors.append(f"Handler {handler.id} 缺少触发器")
                 valid = False
-        
+
         return valid and len(self.errors) == 0

@@ -89,7 +89,7 @@ class WorkflowAnalyzer:
             self._analyze_handler(handler)
 
         return len(self.errors) == 0
-    
+
     def _register_builtins(self) -> None:
         """注册内置符号"""
         for name, (data_type, source) in self.BUILTIN_VARIABLES.items():
@@ -197,7 +197,7 @@ class WorkflowAnalyzer:
             return True  # 未知类型，跳过检查
 
         return isinstance(value, expected)
-    
+
     def get_codegen_context(self) -> dict[str, Any]:
         """获取代码生成所需的上下文"""
         return {

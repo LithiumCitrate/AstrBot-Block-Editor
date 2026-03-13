@@ -52,7 +52,7 @@ class BlockCompiler:
         """
         workflow_path = Path(workflow_path)
         output_dir = Path(output_dir)
-        
+
         # 1. 解析
         ast = self.parser.parse_file(workflow_path)
 
@@ -116,7 +116,7 @@ class BlockCompiler:
 
         # 4. 代码生成
         files = self.generator.generate(ast)
-        
+
         return {
             "success": validation_result and analysis_result,
             "files": files,
