@@ -39,6 +39,22 @@ const BLOCKS = {
         ],
         outputs: ['flow', 'matched']
     },
+    'trigger.start_with': {
+        type: 'trigger', category: 'trigger', name: '开头匹配', color: '#34d399',
+        params: [
+            { name: 'prefix', type: 'string', label: '开头文本', default: '' },
+            { name: 'case_sensitive', type: 'boolean', label: '区分大小写', default: false }
+        ],
+        outputs: ['flow', 'event', 'remaining']
+    },
+    'trigger.end_with': {
+        type: 'trigger', category: 'trigger', name: '结尾匹配', color: '#34d399',
+        params: [
+            { name: 'suffix', type: 'string', label: '结尾文本', default: '' },
+            { name: 'case_sensitive', type: 'boolean', label: '区分大小写', default: false }
+        ],
+        outputs: ['flow', 'event', 'remaining']
+    },
     'trigger.permission': {
         type: 'trigger', category: 'trigger', name: '权限过滤', color: '#6ee7b7',
         params: [
@@ -74,6 +90,30 @@ const BLOCKS = {
         type: 'action', category: 'action', name: '停止传播', color: '#c4b5fd',
         params: [],
         inputs: ['flow'], outputs: []
+    },
+    'action.reply_card': {
+        type: 'action', category: 'action', name: '回复卡片', color: '#7c3aed',
+        params: [
+            { name: 'title', type: 'template', label: '标题', default: '' },
+            { name: 'content', type: 'template', label: '内容', default: '' },
+            { name: 'image_url', type: 'string', label: '图片URL', default: '' },
+            { name: 'url', type: 'string', label: '跳转URL', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.goto': {
+        type: 'action', category: 'action', name: '跳转标签', color: '#8b5cf6',
+        params: [
+            { name: 'label', type: 'string', label: '标签名', default: 'loop_start' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.label': {
+        type: 'action', category: 'action', name: '定义标签', color: '#a78bfa',
+        params: [
+            { name: 'label', type: 'string', label: '标签名', default: 'loop_start' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
     },
     'action.http_request': {
         type: 'action', category: 'action', name: 'HTTP请求', color: '#4f46e5',
@@ -111,7 +151,7 @@ const BLOCKS = {
     'util.get_sender_info': {
         type: 'util', category: 'util', name: '发送者信息', color: '#06b6d4',
         params: [
-            { name: 'info_type', type: 'enum', label: '类型', default: 'id', options: ['id', 'name', 'role'] },
+            { name: 'info_type', type: 'enum', label: '类型', default: 'id', options: ['id', 'name', 'role', 'avatar', 'is_admin', 'is_owner'] },
             { name: 'save_to', type: 'string', label: '保存到', default: 'sender_id' }
         ],
         inputs: ['flow'], outputs: ['flow', 'result']
@@ -138,9 +178,20 @@ const BLOCKS = {
     'util.variable': {
         type: 'util', category: 'util', name: '变量操作', color: '#a5f3fc',
         params: [
-            { name: 'operation', type: 'enum', label: '操作', default: 'set', options: ['set', 'get', 'increment', 'decrement'] },
+            { name: 'operation', type: 'enum', label: '操作', default: 'set', options: ['set', 'get', 'increment', 'decrement', 'append', 'add', 'subtract', 'multiply', 'divide'] },
             { name: 'name', type: 'string', label: '变量名', default: 'counter' },
             { name: 'value', type: 'template', label: '值', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.data_store': {
+        type: 'util', category: 'util', name: '数据存储', color: '#0e7490',
+        params: [
+            { name: 'operation', type: 'enum', label: '操作', default: 'save', options: ['save', 'load', 'delete', 'exists'] },
+            { name: 'key', type: 'template', label: '键名', default: '' },
+            { name: 'value', type: 'template', label: '值', default: '' },
+            { name: 'save_to', type: 'string', label: '加载到变量', default: 'loaded_data' },
+            { name: 'file_name', type: 'string', label: '文件名', default: 'plugin_data.json' }
         ],
         inputs: ['flow'], outputs: ['flow', 'result']
     },
@@ -155,7 +206,7 @@ const BLOCKS = {
     'util.get_group_info': {
         type: 'util', category: 'util', name: '群组信息', color: '#0891b2',
         params: [
-            { name: 'info_type', type: 'enum', label: '类型', default: 'id', options: ['id', 'name', 'member_count'] },
+            { name: 'info_type', type: 'enum', label: '类型', default: 'id', options: ['id', 'name', 'member_count', 'description'] },
             { name: 'save_to', type: 'string', label: '保存到', default: 'group_id' }
         ],
         inputs: ['flow'], outputs: ['flow', 'result']
@@ -241,6 +292,182 @@ const BLOCKS = {
             { name: 'max_iterations', type: 'number', label: '最大迭代', default: 100 }
         ],
         inputs: ['flow'], outputs: ['flow_loop']
+    },
+    
+    // 新增动作块
+    'action.reply_face': {
+        type: 'action', category: 'action', name: '回复表情', color: '#ec4899',
+        params: [
+            { name: 'face_id', type: 'string', label: '表情ID', default: '1' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.delete_msg': {
+        type: 'action', category: 'action', name: '撤回消息', color: '#ef4444',
+        params: [
+            { name: 'message_id', type: 'template', label: '消息ID', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.set_group_card': {
+        type: 'action', category: 'action', name: '设置群名片', color: '#f59e0b',
+        params: [
+            { name: 'user_id', type: 'template', label: '用户ID', default: '' },
+            { name: 'card', type: 'template', label: '名片', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.kick_member': {
+        type: 'action', category: 'action', name: '踢出成员', color: '#dc2626',
+        params: [
+            { name: 'user_id', type: 'template', label: '用户ID', default: '' },
+            { name: 'reject_add_request', type: 'boolean', label: '拒绝加群', default: false }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.mute_member': {
+        type: 'action', category: 'action', name: '禁言成员', color: '#b91c1c',
+        params: [
+            { name: 'user_id', type: 'template', label: '用户ID', default: '' },
+            { name: 'duration', type: 'number', label: '时长(秒)', default: 60 }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.unmute_member': {
+        type: 'action', category: 'action', name: '解除禁言', color: '#059669',
+        params: [
+            { name: 'user_id', type: 'template', label: '用户ID', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.set_admin': {
+        type: 'action', category: 'action', name: '设置管理员', color: '#d97706',
+        params: [
+            { name: 'user_id', type: 'template', label: '用户ID', default: '' },
+            { name: 'is_admin', type: 'boolean', label: '设为管理员', default: true }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    
+    // 新增工具块
+    'util.format_string': {
+        type: 'util', category: 'util', name: '字符串格式化', color: '#8b5cf6',
+        params: [
+            { name: 'template', type: 'template', label: '模板', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'formatted_str' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.json_parse': {
+        type: 'util', category: 'util', name: 'JSON解析', color: '#7c3aed',
+        params: [
+            { name: 'operation', type: 'enum', label: '操作', default: 'parse', options: ['parse', 'get', 'stringify'] },
+            { name: 'json_string', type: 'template', label: 'JSON字符串', default: '' },
+            { name: 'path', type: 'string', label: '路径', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'json_result' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.debug_log': {
+        type: 'util', category: 'util', name: '调试日志', color: '#6d28d9',
+        params: [
+            { name: 'variables', type: 'array', label: '变量列表', default: [] },
+            { name: 'message', type: 'template', label: '消息', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'util.http_build': {
+        type: 'util', category: 'util', name: '构建HTTP参数', color: '#5b21b6',
+        params: [
+            { name: 'params', type: 'object', label: '参数', default: {} },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'http_params' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.string_operation': {
+        type: 'util', category: 'util', name: '字符串操作', color: '#4c1d95',
+        params: [
+            { name: 'operation', type: 'enum', label: '操作', default: 'strip', options: ['upper', 'lower', 'strip', 'split', 'join', 'replace', 'substring', 'length', 'contains'] },
+            { name: 'string', type: 'template', label: '字符串', default: '' },
+            { name: 'separator', type: 'string', label: '分隔符', default: ' ' },
+            { name: 'old', type: 'string', label: '被替换文本', default: '' },
+            { name: 'new', type: 'string', label: '替换为', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'str_result' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    
+    // 新增工具块 - 可选增强
+    'util.file_operation': {
+        type: 'util', category: 'util', name: '文件操作', color: '#3730a3',
+        params: [
+            { name: 'operation', type: 'enum', label: '操作', default: 'read', options: ['read', 'write', 'append', 'exists', 'delete', 'list_dir'] },
+            { name: 'path', type: 'template', label: '文件路径', default: '' },
+            { name: 'content', type: 'template', label: '写入内容', default: '' },
+            { name: 'encoding', type: 'string', label: '编码', default: 'utf-8' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'file_content' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.regex_extract': {
+        type: 'util', category: 'util', name: '正则提取', color: '#312e81',
+        params: [
+            { name: 'operation', type: 'enum', label: '操作', default: 'search', options: ['match', 'search', 'findall', 'split', 'sub'] },
+            { name: 'pattern', type: 'string', label: '正则表达式', default: '' },
+            { name: 'text', type: 'template', label: '输入文本', default: '' },
+            { name: 'replacement', type: 'string', label: '替换文本', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'regex_result' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.array_operation': {
+        type: 'util', category: 'util', name: '数组操作', color: '#282878',
+        params: [
+            { name: 'operation', type: 'enum', label: '操作', default: 'append', options: ['get', 'set', 'append', 'insert', 'remove', 'pop', 'length', 'contains', 'index', 'slice', 'sort', 'reverse', 'join', 'unique', 'extend'] },
+            { name: 'array', type: 'string', label: '数组变量', default: '' },
+            { name: 'index', type: 'number', label: '索引', default: 0 },
+            { name: 'value', type: 'template', label: '值', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'result' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    'util.type_convert': {
+        type: 'util', category: 'util', name: '类型转换', color: '#1e1b4b',
+        params: [
+            { name: 'operation', type: 'enum', label: '转换类型', default: 'to_str', options: ['to_int', 'to_float', 'to_str', 'to_bool', 'to_list', 'to_dict'] },
+            { name: 'value', type: 'template', label: '值', default: '' },
+            { name: 'default_value', type: 'string', label: '默认值', default: '' },
+            { name: 'save_to', type: 'string', label: '保存到', default: 'converted' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    
+    // 新增动作块 - 可选增强
+    'action.send_private': {
+        type: 'action', category: 'action', name: '发送私聊', color: '#0ea5e9',
+        params: [
+            { name: 'user_id', type: 'template', label: '用户ID', default: '' },
+            { name: 'message_type', type: 'enum', label: '消息类型', default: 'text', options: ['text', 'image'] },
+            { name: 'content', type: 'template', label: '内容', default: '' }
+        ],
+        inputs: ['flow'], outputs: ['flow']
+    },
+    'action.get_member_list': {
+        type: 'action', category: 'action', name: '获取群成员列表', color: '#06b6d4',
+        params: [
+            { name: 'save_to', type: 'string', label: '保存到', default: 'member_list' }
+        ],
+        inputs: ['flow'], outputs: ['flow', 'result']
+    },
+    
+    // 新增触发块 - 可选增强
+    'trigger.file_received': {
+        type: 'trigger', category: 'trigger', name: '文件接收触发', color: '#22c55e',
+        params: [
+            { name: 'file_types', type: 'array', label: '允许类型', default: [] },
+            { name: 'max_size', type: 'number', label: '最大大小(KB)', default: 0 }
+        ],
+        outputs: ['flow', 'event', 'file_name', 'file_url', 'file_size']
     }
 };
 

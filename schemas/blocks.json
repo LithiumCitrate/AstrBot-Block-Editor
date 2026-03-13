@@ -150,6 +150,94 @@
       "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''关键词触发处理器'''\n    msg = event.message_str{% if not params.case_sensitive %}.lower(){% endif %}\n    keywords = {{params.keywords}}\n    matched = None\n    {% if params.match_all %}\n    if all(kw in msg for kw in keywords):\n        matched = keywords\n    {% else %}\n    for kw in keywords:\n        if kw in msg:\n            matched = kw\n            break\n    {% endif %}\n    if matched:\n        {{handler_body}}"
     },
 
+    "trigger.start_with": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "开头匹配触发",
+      "description": "当消息以指定文本开头时触发",
+      "icon": "corner-up-left",
+      "color": "#4CAF50",
+      "params": {
+        "prefix": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "开头文本"
+        },
+        "case_sensitive": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "是否区分大小写"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "message_str": {
+          "type": "string",
+          "description": "消息文本内容"
+        },
+        "remaining": {
+          "type": "string",
+          "description": "去除开头后的剩余文本"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''开头匹配触发'''\n    msg = event.message_str\n    prefix = \"{{params.prefix}}\"\n    {% if not params.case_sensitive %}\n    if msg.lower().startswith(prefix.lower()):\n        remaining = msg[len(prefix):].lstrip()\n    {% else %}\n    if msg.startswith(prefix):\n        remaining = msg[len(prefix):].lstrip()\n    {% endif %}\n        {{handler_body}}"
+    },
+
+    "trigger.end_with": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "结尾匹配触发",
+      "description": "当消息以指定文本结尾时触发",
+      "icon": "corner-down-right",
+      "color": "#4CAF50",
+      "params": {
+        "suffix": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "结尾文本"
+        },
+        "case_sensitive": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "是否区分大小写"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "message_str": {
+          "type": "string",
+          "description": "消息文本内容"
+        },
+        "remaining": {
+          "type": "string",
+          "description": "去除结尾后的剩余文本"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''结尾匹配触发'''\n    msg = event.message_str\n    suffix = \"{{params.suffix}}\"\n    {% if not params.case_sensitive %}\n    if msg.lower().endswith(suffix.lower()):\n        remaining = msg[:-len(suffix)].rstrip()\n    {% else %}\n    if msg.endswith(suffix):\n        remaining = msg[:-len(suffix)].rstrip()\n    {% endif %}\n        {{handler_body}}"
+    },
+
     "trigger.event_message_type": {
       "type": "trigger",
       "category": "trigger",
@@ -1243,10 +1331,10 @@
       "params": {
         "info_type": {
           "type": "enum",
-          "enum": ["id", "name", "role"],
+          "enum": ["id", "name", "role", "avatar", "is_admin", "is_owner"],
           "required": true,
           "default": "id",
-          "description": "信息类型"
+          "description": "信息类型：id(用户ID)、name(昵称)、role(角色)、avatar(头像URL)、is_admin(是否管理员)、is_owner(是否群主)"
         },
         "save_to": {
           "type": "string",
@@ -1271,7 +1359,7 @@
           "description": "获取到的值"
         }
       },
-      "code_template": "{% if params.info_type == 'id' %}{{params.save_to or '_sender_id'}} = event.get_sender_id(){% elif params.info_type == 'name' %}{{params.save_to or '_sender_name'}} = event.get_sender_name(){% elif params.info_type == 'role' %}{{params.save_to or '_sender_role'}} = event.role{% endif %}"
+      "code_template": "{% if params.info_type == 'id' %}{{params.save_to or '_sender_id'}} = event.get_sender_id(){% elif params.info_type == 'name' %}{{params.save_to or '_sender_name'}} = event.get_sender_name(){% elif params.info_type == 'role' %}{{params.save_to or '_sender_role'}} = event.role{% elif params.info_type == 'avatar' %}{{params.save_to or '_sender_avatar'}} = event.get_sender_avatar_url() or \"\"{% endif %}"
     },
 
     "util.get_group_info": {
@@ -1284,10 +1372,10 @@
       "params": {
         "info_type": {
           "type": "enum",
-          "enum": ["id", "name", "member_count"],
+          "enum": ["id", "name", "member_count", "description"],
           "required": true,
           "default": "id",
-          "description": "信息类型"
+          "description": "信息类型：id(群ID)、name(群名)、member_count(成员数)、description(群描述)"
         },
         "save_to": {
           "type": "string",
@@ -1312,7 +1400,7 @@
           "description": "获取到的值"
         }
       },
-      "code_template": "{% if params.info_type == 'id' %}{{params.save_to or '_group_id'}} = event.get_group_id(){% elif params.info_type == 'name' %}group = await event.get_group()\n{{params.save_to or '_group_name'}} = group.group_name if group else \"\"{% elif params.info_type == 'member_count' %}group = await event.get_group()\n{{params.save_to or '_member_count'}} = group.member_count if group else 0{% endif %}"
+      "code_template": "{% if params.info_type == 'id' %}{{params.save_to or '_group_id'}} = event.get_group_id(){% elif params.info_type == 'name' %}group = await event.get_group()\n{{params.save_to or '_group_name'}} = group.group_name if group else \"\"{% elif params.info_type == 'member_count' %}group = await event.get_group()\n{{params.save_to or '_member_count'}} = group.member_count if group else 0{% elif params.info_type == 'description' %}group = await event.get_group()\n{{params.save_to or '_group_desc'}} = group.group_desc if group and hasattr(group, 'group_desc') else \"\"{% endif %}"
     },
 
     "util.get_message": {
@@ -1470,10 +1558,10 @@
       "params": {
         "operation": {
           "type": "enum",
-          "enum": ["set", "get", "increment", "decrement", "append"],
+          "enum": ["set", "get", "increment", "decrement", "append", "add", "subtract", "multiply", "divide"],
           "required": true,
           "default": "set",
-          "description": "操作类型"
+          "description": "操作类型：set(赋值)、get(获取)、increment(自增1)、decrement(自减1)、append(追加)、add(加法)、subtract(减法)、multiply(乘法)、divide(除法)"
         },
         "name": {
           "type": "string",
@@ -1485,7 +1573,7 @@
           "type": "string",
           "required": false,
           "default": "",
-          "description": "值（set/append时）",
+          "description": "值（set/append/add/subtract/multiply/divide时）",
           "supports_template": true
         }
       },
@@ -1505,7 +1593,7 @@
           "description": "变量值"
         }
       },
-      "code_template": "{% if params.operation == 'set' %}self.{{params.name}} = {{params.value | render_template}}{% elif params.operation == 'get' %}_var_{{params.name}} = self.{{params.name}}{% elif params.operation == 'increment' %}self.{{params.name}} = self.{{params.name}} + 1{% elif params.operation == 'decrement' %}self.{{params.name}} = self.{{params.name}} - 1{% elif params.operation == 'append' %}self.{{params.name}}.append({{params.value | render_template}}){% endif %}"
+      "code_template": "{% if params.operation == 'set' %}self.{{params.name}} = {{params.value | render_template}}{% elif params.operation == 'get' %}_var_{{params.name}} = self.{{params.name}}{% elif params.operation == 'increment' %}self.{{params.name}} = self.{{params.name}} + 1{% elif params.operation == 'decrement' %}self.{{params.name}} = self.{{params.name}} - 1{% elif params.operation == 'append' %}self.{{params.name}}.append({{params.value | render_template}}){% elif params.operation == 'add' %}self.{{params.name}} = self.{{params.name}} + {{params.value | render_template}}{% elif params.operation == 'subtract' %}self.{{params.name}} = self.{{params.name}} - {{params.value | render_template}}{% elif params.operation == 'multiply' %}self.{{params.name}} = self.{{params.name}} * {{params.value | render_template}}{% elif params.operation == 'divide' %}self.{{params.name}} = self.{{params.name}} / {{params.value | render_template}}{% endif %}"
     },
 
     "util.log": {
@@ -1544,6 +1632,1075 @@
         }
       },
       "code_template": "logger.{{params.level}}({{params.message | render_template}})"
+    },
+
+    "action.reply_card": {
+      "type": "action",
+      "category": "action",
+      "display_name": "回复卡片消息",
+      "description": "回复一个卡片样式的消息",
+      "icon": "layout",
+      "color": "#2196F3",
+      "params": {
+        "title": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "卡片标题",
+          "supports_template": true
+        },
+        "content": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "卡片内容",
+          "supports_template": true
+        },
+        "image_url": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "卡片图片URL（可选）"
+        },
+        "url": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "点击跳转URL（可选）"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "from astrbot.api.message_components import Card\nyield event.chain_result([Card(title={{params.title | render_template}}, content={{params.content | render_template}}, image_url=\"{{params.image_url}}\", url=\"{{params.url}}\")])"
+    },
+
+    "action.goto": {
+      "type": "action",
+      "category": "action",
+      "display_name": "跳转到标签",
+      "description": "跳转到指定的标签位置继续执行",
+      "icon": "navigation",
+      "color": "#2196F3",
+      "params": {
+        "label": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "目标标签名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "goto_{{params.label}} = True"
+    },
+
+    "action.label": {
+      "type": "action",
+      "category": "action",
+      "display_name": "定义标签",
+      "description": "定义一个标签位置，供跳转使用",
+      "icon": "bookmark",
+      "color": "#2196F3",
+      "params": {
+        "label": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "标签名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "# Label: {{params.label}}"
+    },
+
+    "util.data_store": {
+      "type": "util",
+      "category": "util",
+      "display_name": "数据存储",
+      "description": "持久化存储数据到文件",
+      "icon": "database",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["save", "load", "delete", "exists"],
+          "required": true,
+          "default": "save",
+          "description": "操作类型：save(保存)、load(加载)、delete(删除)、exists(检查存在)"
+        },
+        "key": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "数据键名",
+          "supports_template": true
+        },
+        "value": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "数据值（save时）",
+          "supports_template": true
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "加载到的变量名（load时）"
+        },
+        "file_name": {
+          "type": "string",
+          "required": false,
+          "default": "plugin_data.json",
+          "description": "存储文件名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "加载的数据值（load时）"
+        },
+        "exists": {
+          "type": "boolean",
+          "description": "是否存在（exists时）"
+        }
+      },
+      "code_template": "import json\nfrom pathlib import Path\n_data_file = Path(__file__).parent / \"{{params.file_name}}\"\n{% if params.operation == 'save' %}\nif not _data_file.exists():\n    _data_store = {}\nelse:\n    with open(_data_file, 'r', encoding='utf-8') as _f:\n        _data_store = json.load(_f)\n_data_store[{{params.key | render_template}}] = {{params.value | render_template}}\nwith open(_data_file, 'w', encoding='utf-8') as _f:\n    json.dump(_data_store, _f, ensure_ascii=False, indent=2)\n{% elif params.operation == 'load' %}\nif _data_file.exists():\n    with open(_data_file, 'r', encoding='utf-8') as _f:\n        _data_store = json.load(_f)\n    {{params.save_to or '_loaded_data'}} = _data_store.get({{params.key | render_template}})\nelse:\n    {{params.save_to or '_loaded_data'}} = None\n{% elif params.operation == 'delete' %}\nif _data_file.exists():\n    with open(_data_file, 'r', encoding='utf-8') as _f:\n        _data_store = json.load(_f)\n    if {{params.key | render_template}} in _data_store:\n        del _data_store[{{params.key | render_template}}]\n        with open(_data_file, 'w', encoding='utf-8') as _f:\n            json.dump(_data_store, _f, ensure_ascii=False, indent=2)\n{% elif params.operation == 'exists' %}\n_exists_result = False\nif _data_file.exists():\n    with open(_data_file, 'r', encoding='utf-8') as _f:\n        _data_store = json.load(_f)\n    _exists_result = {{params.key | render_template}} in _data_store\n{% endif %}"
+    },
+
+    "action.reply_face": {
+      "type": "action",
+      "category": "action",
+      "display_name": "回复表情",
+      "description": "回复一个QQ表情",
+      "icon": "smile",
+      "color": "#2196F3",
+      "params": {
+        "face_id": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "表情ID"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "yield event.chain_result([Comp.Face(id={{params.face_id}})])"
+    },
+
+    "action.delete_msg": {
+      "type": "action",
+      "category": "action",
+      "display_name": "撤回消息",
+      "description": "撤回指定的消息",
+      "icon": "trash-2",
+      "color": "#2196F3",
+      "params": {
+        "message_id": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "消息ID（留空则撤回当前消息）",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "{% if params.message_id %}await event.delete_message({{params.message_id | render_template}}){% else %}await event.delete_message(event.message_id){% endif %}"
+    },
+
+    "action.set_group_card": {
+      "type": "action",
+      "category": "action",
+      "display_name": "设置群名片",
+      "description": "设置群成员的群名片",
+      "icon": "user-cog",
+      "color": "#2196F3",
+      "params": {
+        "user_id": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "用户ID（留空则为自己）",
+          "supports_template": true
+        },
+        "card": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "群名片",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "group = await event.get_group()\n{% if params.user_id %}user_id = {{params.user_id | render_template}}{% else %}user_id = event.get_sender_id(){% endif %}\nif group:\n    await group.set_member_card(user_id, {{params.card | render_template}})"
+    },
+
+    "action.kick_member": {
+      "type": "action",
+      "category": "action",
+      "display_name": "踢出成员",
+      "description": "将成员踢出群聊（需要管理员权限）",
+      "icon": "user-minus",
+      "color": "#EF4444",
+      "params": {
+        "user_id": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "要踢出的用户ID",
+          "supports_template": true
+        },
+        "reject_add_request": {
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "description": "是否拒绝再次加群"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "group = await event.get_group()\nif group:\n    await group.kick_member({{params.user_id | render_template}}, reject_add_request={{params.reject_add_request}})"
+    },
+
+    "action.mute_member": {
+      "type": "action",
+      "category": "action",
+      "display_name": "禁言成员",
+      "description": "禁言群成员（需要管理员权限）",
+      "icon": "volume-x",
+      "color": "#EF4444",
+      "params": {
+        "user_id": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "要禁言的用户ID",
+          "supports_template": true
+        },
+        "duration": {
+          "type": "number",
+          "required": true,
+          "default": 60,
+          "description": "禁言时长（秒）"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "group = await event.get_group()\nif group:\n    await group.mute_member({{params.user_id | render_template}}, duration={{params.duration}})"
+    },
+
+    "action.unmute_member": {
+      "type": "action",
+      "category": "action",
+      "display_name": "解除禁言",
+      "description": "解除群成员的禁言（需要管理员权限）",
+      "icon": "volume-2",
+      "color": "#2196F3",
+      "params": {
+        "user_id": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "要解除禁言的用户ID",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "group = await event.get_group()\nif group:\n    await group.mute_member({{params.user_id | render_template}}, duration=0)"
+    },
+
+    "action.set_admin": {
+      "type": "action",
+      "category": "action",
+      "display_name": "设置管理员",
+      "description": "设置或取消群管理员（需要群主权限）",
+      "icon": "shield",
+      "color": "#F59E0B",
+      "params": {
+        "user_id": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "用户ID",
+          "supports_template": true
+        },
+        "is_admin": {
+          "type": "boolean",
+          "required": true,
+          "default": true,
+          "description": "true为设置管理员，false为取消管理员"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "group = await event.get_group()\nif group:\n    await group.set_member_admin({{params.user_id | render_template}}, is_admin={{params.is_admin}})"
+    },
+
+    "util.format_string": {
+      "type": "util",
+      "category": "util",
+      "display_name": "字符串格式化",
+      "description": "格式化字符串，支持模板变量替换",
+      "icon": "type",
+      "color": "#9C27B0",
+      "params": {
+        "template": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "格式模板，使用{var}占位符",
+          "supports_template": true
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "formatted_str",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "string",
+          "description": "格式化后的字符串"
+        }
+      },
+      "code_template": "{{params.save_to}} = f\"{{params.template | render_template}}\""
+    },
+
+    "util.json_parse": {
+      "type": "util",
+      "category": "util",
+      "display_name": "JSON解析",
+      "description": "解析JSON字符串或提取JSON字段",
+      "icon": "braces",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["parse", "get", "stringify"],
+          "required": true,
+          "default": "parse",
+          "description": "操作类型：parse(解析)、get(获取字段)、stringify(转字符串)"
+        },
+        "json_string": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "JSON字符串",
+          "supports_template": true
+        },
+        "path": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "字段路径，如 data.name 或 items[0].id"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "json_result",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "解析结果"
+        }
+      },
+      "code_template": "import json\n{% if params.operation == 'parse' %}\n{{params.save_to}} = json.loads({{params.json_string | render_template}})\n{% elif params.operation == 'get' %}\n_json_obj = json.loads({{params.json_string | render_template}})\n{% set path_parts = params.path.split('.') %}\n{% for part in path_parts %}\n{% if '[' in part %}\n{% set arr_name = part.split('[')[0] %}\n{% set idx = part.split('[')[1].rstrip(']') %}\n_json_obj = _json_obj[\"{{arr_name}}\"][{{idx}}]\n{% else %}\n_json_obj = _json_obj[\"{{part}}\"]\n{% endif %}\n{% endfor %}\n{{params.save_to}} = _json_obj\n{% elif params.operation == 'stringify' %}\n{{params.save_to}} = json.dumps({{params.json_string | render_template}}, ensure_ascii=False, indent=2)\n{% endif %}"
+    },
+
+    "util.debug_log": {
+      "type": "util",
+      "category": "util",
+      "display_name": "调试日志",
+      "description": "输出调试信息，记录变量状态",
+      "icon": "bug",
+      "color": "#9C27B0",
+      "params": {
+        "variables": {
+          "type": "array",
+          "items": {"type": "string"},
+          "required": false,
+          "default": [],
+          "description": "要记录的变量名列表"
+        },
+        "message": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "附加消息",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "logger.debug(\"=== Debug Log ===\")\n{% if params.message %}\nlogger.debug(\"Message: {{params.message | render_template}}\")\n{% endif %}\n{% for var in params.variables %}\nlogger.debug(\"{{var}} = \" + str({{var}}))\n{% endfor %}\nlogger.debug(\"=================\")"
+    },
+
+    "util.http_build": {
+      "type": "util",
+      "category": "util",
+      "display_name": "构建HTTP参数",
+      "description": "构建URL查询参数或请求体",
+      "icon": "link",
+      "color": "#9C27B0",
+      "params": {
+        "params": {
+          "type": "object",
+          "required": true,
+          "default": {},
+          "description": "参数键值对"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "http_params",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "string",
+          "description": "构建的参数字符串"
+        }
+      },
+      "code_template": "from urllib.parse import urlencode\n{{params.save_to}} = urlencode({{params.params}})"
+    },
+
+    "util.string_operation": {
+      "type": "util",
+      "category": "util",
+      "display_name": "字符串操作",
+      "description": "字符串的常用操作",
+      "icon": "scissors",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["upper", "lower", "strip", "split", "join", "replace", "substring", "length", "contains"],
+          "required": true,
+          "default": "strip",
+          "description": "操作类型"
+        },
+        "string": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "输入字符串",
+          "supports_template": true
+        },
+        "separator": {
+          "type": "string",
+          "required": false,
+          "default": " ",
+          "description": "分隔符（split/join时）"
+        },
+        "old": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "被替换的文本（replace时）"
+        },
+        "new": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "替换为的文本（replace时）"
+        },
+        "start": {
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "description": "起始位置（substring时）"
+        },
+        "end": {
+          "type": "number",
+          "required": false,
+          "default": -1,
+          "description": "结束位置（substring时，-1表示末尾）"
+        },
+        "items": {
+          "type": "string",
+          "required": false,
+          "default": "[]",
+          "description": "列表项（join时）"
+        },
+        "search": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "搜索文本（contains时）"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "str_result",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "操作结果"
+        }
+      },
+      "code_template": "{% if params.operation == 'upper' %}\n{{params.save_to}} = {{params.string | render_template}}.upper()\n{% elif params.operation == 'lower' %}\n{{params.save_to}} = {{params.string | render_template}}.lower()\n{% elif params.operation == 'strip' %}\n{{params.save_to}} = {{params.string | render_template}}.strip()\n{% elif params.operation == 'split' %}\n{{params.save_to}} = {{params.string | render_template}}.split(\"{{params.separator}}\")\n{% elif params.operation == 'join' %}\n{{params.save_to}} = \"{{params.separator}}\".join({{params.items}})\n{% elif params.operation == 'replace' %}\n{{params.save_to}} = {{params.string | render_template}}.replace(\"{{params.old}}\", \"{{params.new}}\")\n{% elif params.operation == 'substring' %}\n{% if params.end == -1 %}\n{{params.save_to}} = {{params.string | render_template}}[{{params.start}}:]\n{% else %}\n{{params.save_to}} = {{params.string | render_template}}[{{params.start}}:{{params.end}}]\n{% endif %}\n{% elif params.operation == 'length' %}\n{{params.save_to}} = len({{params.string | render_template}})\n{% elif params.operation == 'contains' %}\n{{params.save_to}} = \"{{params.search}}\" in {{params.string | render_template}}\n{% endif %}"
+    },
+
+    "util.file_operation": {
+      "type": "util",
+      "category": "util",
+      "display_name": "文件操作",
+      "description": "读写文件内容",
+      "icon": "file",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["read", "write", "append", "exists", "delete", "list_dir"],
+          "required": true,
+          "default": "read",
+          "description": "操作类型：read(读取)、write(写入)、append(追加)、exists(检查存在)、delete(删除)、list_dir(列出目录)"
+        },
+        "path": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "文件路径（相对于插件目录）",
+          "supports_template": true
+        },
+        "content": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "写入内容（write/append时）",
+          "supports_template": true
+        },
+        "encoding": {
+          "type": "string",
+          "required": false,
+          "default": "utf-8",
+          "description": "文件编码"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "file_content",
+          "description": "保存到的变量名（read/list_dir时）"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "读取的内容或文件列表"
+        },
+        "exists": {
+          "type": "boolean",
+          "description": "文件是否存在（exists时）"
+        }
+      },
+      "code_template": "from pathlib import Path\n_file_path = Path(__file__).parent / {{params.path | render_template}}\n{% if params.operation == 'read' %}\nif _file_path.exists():\n    with open(_file_path, 'r', encoding='{{params.encoding}}') as _f:\n        {{params.save_to}} = _f.read()\nelse:\n    {{params.save_to}} = None\n{% elif params.operation == 'write' %}\nwith open(_file_path, 'w', encoding='{{params.encoding}}') as _f:\n    _f.write({{params.content | render_template}})\n{% elif params.operation == 'append' %}\nwith open(_file_path, 'a', encoding='{{params.encoding}}') as _f:\n    _f.write({{params.content | render_template}})\n{% elif params.operation == 'exists' %}\n_exists_result = _file_path.exists()\n{% elif params.operation == 'delete' %}\nif _file_path.exists():\n    _file_path.unlink()\n{% elif params.operation == 'list_dir' %}\nif _file_path.exists() and _file_path.is_dir():\n    {{params.save_to}} = [f.name for f in _file_path.iterdir()]\nelse:\n    {{params.save_to}} = []\n{% endif %}"
+    },
+
+    "util.regex_extract": {
+      "type": "util",
+      "category": "util",
+      "display_name": "正则提取",
+      "description": "使用正则表达式提取文本",
+      "icon": "search",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["match", "search", "findall", "split", "sub"],
+          "required": true,
+          "default": "search",
+          "description": "操作类型：match(从头匹配)、search(搜索)、findall(全部匹配)、split(分割)、sub(替换)"
+        },
+        "pattern": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "正则表达式"
+        },
+        "text": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "输入文本",
+          "supports_template": true
+        },
+        "replacement": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "替换文本（sub时）"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "regex_result",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "匹配结果"
+        }
+      },
+      "code_template": "import re\n{% if params.operation == 'match' %}\n_match = re.match(r\"{{params.pattern}}\", {{params.text | render_template}})\n{{params.save_to}} = _match.groups() if _match else None\n{% elif params.operation == 'search' %}\n_match = re.search(r\"{{params.pattern}}\", {{params.text | render_template}})\n{{params.save_to}} = _match.groups() if _match else None\n{% elif params.operation == 'findall' %}\n{{params.save_to}} = re.findall(r\"{{params.pattern}}\", {{params.text | render_template}})\n{% elif params.operation == 'split' %}\n{{params.save_to}} = re.split(r\"{{params.pattern}}\", {{params.text | render_template}})\n{% elif params.operation == 'sub' %}\n{{params.save_to}} = re.sub(r\"{{params.pattern}}\", \"{{params.replacement}}\", {{params.text | render_template}})\n{% endif %}"
+    },
+
+    "util.array_operation": {
+      "type": "util",
+      "category": "util",
+      "display_name": "数组操作",
+      "description": "数组的常用操作",
+      "icon": "list",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["get", "set", "append", "insert", "remove", "pop", "length", "contains", "index", "slice", "sort", "reverse", "join", "unique", "extend"],
+          "required": true,
+          "default": "append",
+          "description": "操作类型"
+        },
+        "array": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "数组变量名",
+          "supports_template": true
+        },
+        "index": {
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "description": "索引位置（get/set/insert/pop时）"
+        },
+        "value": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "值（set/append/insert/remove/extend时）",
+          "supports_template": true
+        },
+        "start": {
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "description": "起始位置（slice时）"
+        },
+        "end": {
+          "type": "number",
+          "required": false,
+          "default": -1,
+          "description": "结束位置（slice时，-1表示末尾）"
+        },
+        "separator": {
+          "type": "string",
+          "required": false,
+          "default": ",",
+          "description": "分隔符（join时）"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "result",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "操作结果"
+        }
+      },
+      "code_template": "{% if params.operation == 'get' %}\n{{params.save_to}} = {{params.array}}[{{params.index}}]\n{% elif params.operation == 'set' %}\n{{params.array}}[{{params.index}}] = {{params.value | render_template}}\n{% elif params.operation == 'append' %}\n{{params.array}}.append({{params.value | render_template}})\n{% elif params.operation == 'insert' %}\n{{params.array}}.insert({{params.index}}, {{params.value | render_template}})\n{% elif params.operation == 'remove' %}\n{{params.array}}.remove({{params.value | render_template}})\n{% elif params.operation == 'pop' %}\n{{params.save_to}} = {{params.array}}.pop({{params.index}})\n{% elif params.operation == 'length' %}\n{{params.save_to}} = len({{params.array}})\n{% elif params.operation == 'contains' %}\n{{params.save_to}} = {{params.value | render_template}} in {{params.array}}\n{% elif params.operation == 'index' %}\n{{params.save_to}} = {{params.array}}.index({{params.value | render_template}}) if {{params.value | render_template}} in {{params.array}} else -1\n{% elif params.operation == 'slice' %}\n{% if params.end == -1 %}\n{{params.save_to}} = {{params.array}}[{{params.start}}:]\n{% else %}\n{{params.save_to}} = {{params.array}}[{{params.start}}:{{params.end}}]\n{% endif %}\n{% elif params.operation == 'sort' %}\n{{params.array}}.sort()\n{% elif params.operation == 'reverse' %}\n{{params.array}}.reverse()\n{% elif params.operation == 'join' %}\n{{params.save_to}} = \"{{params.separator}}\".join(str(x) for x in {{params.array}})\n{% elif params.operation == 'unique' %}\n{{params.save_to}} = list(set({{params.array}}))\n{% elif params.operation == 'extend' %}\n{{params.array}}.extend({{params.value | render_template}})\n{% endif %}"
+    },
+
+    "util.type_convert": {
+      "type": "util",
+      "category": "util",
+      "display_name": "类型转换",
+      "description": "转换变量类型",
+      "icon": "refresh-cw",
+      "color": "#9C27B0",
+      "params": {
+        "operation": {
+          "type": "enum",
+          "enum": ["to_int", "to_float", "to_str", "to_bool", "to_list", "to_dict"],
+          "required": true,
+          "default": "to_str",
+          "description": "转换类型：to_int(整数)、to_float(浮点数)、to_str(字符串)、to_bool(布尔)、to_list(列表)、to_dict(字典)"
+        },
+        "value": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "要转换的值",
+          "supports_template": true
+        },
+        "default_value": {
+          "type": "string",
+          "required": false,
+          "default": "",
+          "description": "转换失败时的默认值"
+        },
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "converted",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "any",
+          "description": "转换后的值"
+        }
+      },
+      "code_template": "{% if params.operation == 'to_int' %}\ntry:\n    {{params.save_to}} = int({{params.value | render_template}})\nexcept:\n    {{params.save_to}} = {{params.default_value or 0}}\n{% elif params.operation == 'to_float' %}\ntry:\n    {{params.save_to}} = float({{params.value | render_template}})\nexcept:\n    {{params.save_to}} = {{params.default_value or 0.0}}\n{% elif params.operation == 'to_str' %}\n{{params.save_to}} = str({{params.value | render_template}})\n{% elif params.operation == 'to_bool' %}\n{{params.save_to}} = bool({{params.value | render_template}})\n{% elif params.operation == 'to_list' %}\nimport json\ntry:\n    {{params.save_to}} = json.loads({{params.value | render_template}}) if isinstance({{params.value | render_template}}, str) else list({{params.value | render_template}})\nexcept:\n    {{params.save_to}} = []\n{% elif params.operation == 'to_dict' %}\nimport json\ntry:\n    {{params.save_to}} = json.loads({{params.value | render_template}})\nexcept:\n    {{params.save_to}} = {}\n{% endif %}"
+    },
+
+    "action.send_private": {
+      "type": "action",
+      "category": "action",
+      "display_name": "发送私聊",
+      "description": "主动发送私聊消息",
+      "icon": "mail",
+      "color": "#2196F3",
+      "params": {
+        "user_id": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "目标用户ID",
+          "supports_template": true
+        },
+        "message_type": {
+          "type": "enum",
+          "enum": ["text", "image"],
+          "required": true,
+          "default": "text",
+          "description": "消息类型"
+        },
+        "content": {
+          "type": "string",
+          "required": true,
+          "default": "",
+          "description": "消息内容",
+          "supports_template": true
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        }
+      },
+      "code_template": "from astrbot.api.event import MessageChain\n_target_user = \"{{params.user_id}}\"\n_chain = MessageChain().message({{params.content | render_template}})\nawait self.context.send_private_message(_target_user, _chain)"
+    },
+
+    "action.get_member_list": {
+      "type": "action",
+      "category": "action",
+      "display_name": "获取群成员列表",
+      "description": "获取群成员列表信息",
+      "icon": "users",
+      "color": "#2196F3",
+      "params": {
+        "save_to": {
+          "type": "string",
+          "required": false,
+          "default": "member_list",
+          "description": "保存到的变量名"
+        }
+      },
+      "inputs": {
+        "flow": {
+          "type": "flow",
+          "required": true
+        }
+      },
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "继续执行的流程"
+        },
+        "value": {
+          "type": "list",
+          "description": "成员列表"
+        },
+        "count": {
+          "type": "number",
+          "description": "成员数量"
+        }
+      },
+      "code_template": "group = await event.get_group()\nif group:\n    {{params.save_to}} = await group.get_member_list()\n    _member_count = len({{params.save_to}})\nelse:\n    {{params.save_to}} = []\n    _member_count = 0"
+    },
+
+    "trigger.file_received": {
+      "type": "trigger",
+      "category": "trigger",
+      "display_name": "文件接收触发",
+      "description": "当接收到文件时触发",
+      "icon": "file-plus",
+      "color": "#4CAF50",
+      "params": {
+        "file_types": {
+          "type": "array",
+          "items": {"type": "string"},
+          "required": false,
+          "default": [],
+          "description": "允许的文件类型（留空则允许所有），如 [\".txt\", \".pdf\"]"
+        },
+        "max_size": {
+          "type": "number",
+          "required": false,
+          "default": 0,
+          "description": "最大文件大小（KB，0为不限制）"
+        }
+      },
+      "inputs": {},
+      "outputs": {
+        "flow": {
+          "type": "flow",
+          "description": "触发后执行的流程"
+        },
+        "event": {
+          "type": "ref",
+          "ref_type": "AstrMessageEvent",
+          "description": "事件对象"
+        },
+        "file_name": {
+          "type": "string",
+          "description": "文件名"
+        },
+        "file_url": {
+          "type": "string",
+          "description": "文件URL"
+        },
+        "file_size": {
+          "type": "number",
+          "description": "文件大小（字节）"
+        }
+      },
+      "code_template": "@filter.event_message_type(filter.EventMessageType.ALL)\nasync def {{handler_name}}(self, event: AstrMessageEvent):\n    '''文件接收触发'''\n    _has_file = any(isinstance(c, Comp.File) for c in event.get_messages())\n    if not _has_file:\n        return\n    _file_comp = next((c for c in event.get_messages() if isinstance(c, Comp.File)), None)\n    if _file_comp:\n        file_name = _file_comp.name if hasattr(_file_comp, 'name') else \"\"\n        file_url = _file_comp.url if hasattr(_file_comp, 'url') else \"\"\n        file_size = _file_comp.size if hasattr(_file_comp, 'size') else 0\n        {% if params.file_types %}\n        _allowed = any(file_name.endswith(ft) for ft in {{params.file_types}})\n        if not _allowed:\n            return\n        {% endif %}\n        {% if params.max_size > 0 %}\n        if file_size > {{params.max_size}} * 1024:\n            return\n        {% endif %}\n        {{handler_body}}"
     }
   }
 }

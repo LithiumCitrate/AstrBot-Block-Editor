@@ -449,6 +449,73 @@ class CodeGenerator:
         elif block_type == "action.stop_event":
             lines.append(f"{base_indent}event.stop_event()")
         
+        elif block_type == "action.reply_card":
+            title = self._render_template(params.get("title", ""), self.class_vars)
+            content = self._render_template(params.get("content", ""), self.class_vars)
+            image_url = params.get("image_url", "")
+            url = params.get("url", "")
+            
+            lines.append(f"{base_indent}from astrbot.api.message_components import Card")
+            lines.append(f"{base_indent}card = Card(title={title}, content={content}, image_url=\"{image_url}\", url=\"{url}\")")
+            lines.append(f"{base_indent}yield event.chain_result([card])")
+        
+        elif block_type == "action.goto":
+            label = params.get("label", "")
+            lines.append(f"{base_indent}goto_{label} = True")
+        
+        elif block_type == "action.label":
+            label = params.get("label", "")
+            lines.append(f"{base_indent}# Label: {label}")
+        
+        elif block_type == "action.reply_face":
+            face_id = params.get("face_id", "")
+            lines.append(f"{base_indent}yield event.chain_result([Comp.Face(id={face_id})])")
+        
+        elif block_type == "action.delete_msg":
+            message_id = self._render_template(params.get("message_id", ""), self.class_vars)
+            if params.get("message_id"):
+                lines.append(f"{base_indent}await event.delete_message({message_id})")
+            else:
+                lines.append(f"{base_indent}await event.delete_message(event.message_id)")
+        
+        elif block_type == "action.set_group_card":
+            user_id = self._render_template(params.get("user_id", ""), self.class_vars)
+            card = self._render_template(params.get("card", ""), self.class_vars)
+            lines.append(f"{base_indent}group = await event.get_group()")
+            if params.get("user_id"):
+                lines.append(f"{base_indent}user_id = {user_id}")
+            else:
+                lines.append(f"{base_indent}user_id = event.get_sender_id()")
+            lines.append(f"{base_indent}if group:")
+            lines.append(f"{base_indent}    await group.set_member_card(user_id, {card})")
+        
+        elif block_type == "action.kick_member":
+            user_id = self._render_template(params.get("user_id", ""), self.class_vars)
+            reject = params.get("reject_add_request", False)
+            lines.append(f"{base_indent}group = await event.get_group()")
+            lines.append(f"{base_indent}if group:")
+            lines.append(f"{base_indent}    await group.kick_member({user_id}, reject_add_request={reject})")
+        
+        elif block_type == "action.mute_member":
+            user_id = self._render_template(params.get("user_id", ""), self.class_vars)
+            duration = params.get("duration", 60)
+            lines.append(f"{base_indent}group = await event.get_group()")
+            lines.append(f"{base_indent}if group:")
+            lines.append(f"{base_indent}    await group.mute_member({user_id}, duration={duration})")
+        
+        elif block_type == "action.unmute_member":
+            user_id = self._render_template(params.get("user_id", ""), self.class_vars)
+            lines.append(f"{base_indent}group = await event.get_group()")
+            lines.append(f"{base_indent}if group:")
+            lines.append(f"{base_indent}    await group.mute_member({user_id}, duration=0)")
+        
+        elif block_type == "action.set_admin":
+            user_id = self._render_template(params.get("user_id", ""), self.class_vars)
+            is_admin = params.get("is_admin", True)
+            lines.append(f"{base_indent}group = await event.get_group()")
+            lines.append(f"{base_indent}if group:")
+            lines.append(f"{base_indent}    await group.set_member_admin({user_id}, is_admin={is_admin})")
+        
         elif block_type == "action.store_umo":
             var = params.get("variable", "")
             lines.append(f"{base_indent}self.{var} = event.unified_msg_origin")
@@ -562,6 +629,15 @@ class CodeGenerator:
             elif info_type == "role":
                 var = save_to or "_sender_role"
                 lines.append(f"{base_indent}{var} = event.role")
+            elif info_type == "avatar":
+                var = save_to or "_sender_avatar"
+                lines.append(f'{base_indent}{var} = event.get_sender_avatar_url() or ""')
+            elif info_type == "is_admin":
+                var = save_to or "_is_admin"
+                lines.append(f"{base_indent}{var} = event.is_admin()")
+            elif info_type == "is_owner":
+                var = save_to or "_is_owner"
+                lines.append(f"{base_indent}{var} = event.is_owner() if hasattr(event, 'is_owner') else False")
         
         elif block_type == "util.get_group_info":
             info_type = params.get("info_type", "id")
@@ -577,6 +653,8 @@ class CodeGenerator:
                     lines.append(f'{base_indent}{var} = group.group_name if group else ""')
                 elif info_type == "member_count":
                     lines.append(f"{base_indent}{var} = group.member_count if group else 0")
+                elif info_type == "description":
+                    lines.append(f'{base_indent}{var} = group.group_desc if group and hasattr(group, "group_desc") else ""')
         
         elif block_type == "util.get_message":
             info_type = params.get("info_type", "text")
@@ -621,12 +699,22 @@ class CodeGenerator:
         elif block_type == "util.variable":
             operation = params.get("operation", "set")
             name = params.get("name", "")
-            value = self._render_template(params.get("value", ""), self.class_vars)
+            value_raw = params.get("value", "")
             
             if operation == "set":
                 # 跟踪动态创建的类成员变量
                 self.class_vars.add(name)
-                lines.append(f"{base_indent}self.{name} = {value}")
+                # 检查是否是列表/字典字面量
+                value_stripped = value_raw.strip()
+                if value_stripped.startswith('[') or value_stripped.startswith('{'):
+                    # 直接使用原始值作为Python字面量
+                    lines.append(f"{base_indent}self.{name} = {value_raw}")
+                elif value_stripped.lstrip('-').replace('.', '', 1).isdigit():
+                    # 数值字面量，直接使用
+                    lines.append(f"{base_indent}self.{name} = {value_raw}")
+                else:
+                    value = self._render_template(value_raw, self.class_vars)
+                    lines.append(f"{base_indent}self.{name} = {value}")
             elif operation == "get":
                 lines.append(f"{base_indent}_var_{name} = self.{name}")
             elif operation == "increment":
@@ -634,12 +722,322 @@ class CodeGenerator:
             elif operation == "decrement":
                 lines.append(f"{base_indent}self.{name} = self.{name} - 1")
             elif operation == "append":
-                lines.append(f"{base_indent}self.{name}.append({value})")
+                value_stripped = value_raw.strip()
+                if value_stripped.lstrip('-').replace('.', '', 1).isdigit():
+                    # 数值字面量
+                    lines.append(f"{base_indent}self.{name}.append({value_raw})")
+                else:
+                    value = self._render_template(value_raw, self.class_vars)
+                    lines.append(f"{base_indent}self.{name}.append({value})")
+            elif operation == "add":
+                # 数值加法
+                lines.append(f"{base_indent}self.{name} = self.{name} + {value_raw}")
+            elif operation == "subtract":
+                lines.append(f"{base_indent}self.{name} = self.{name} - {value_raw}")
+            elif operation == "multiply":
+                lines.append(f"{base_indent}self.{name} = self.{name} * {value_raw}")
+            elif operation == "divide":
+                lines.append(f"{base_indent}self.{name} = self.{name} / {value_raw}")
         
         elif block_type == "util.log":
             level = params.get("level", "info")
             message = self._render_template(params.get("message", ""), self.class_vars)
             lines.append(f"{base_indent}logger.{level}({message})")
+        
+        elif block_type == "util.data_store":
+            operation = params.get("operation", "save")
+            key = self._render_template(params.get("key", ""), self.class_vars)
+            value = self._render_template(params.get("value", ""), self.class_vars)
+            save_to = params.get("save_to", "_loaded_data")
+            file_name = params.get("file_name", "plugin_data.json")
+            
+            lines.append(f'{base_indent}import json')
+            lines.append(f'{base_indent}from pathlib import Path')
+            lines.append(f'{base_indent}_data_file = Path(__file__).parent / "{file_name}"')
+            
+            if operation == "save":
+                lines.append(f'{base_indent}if not _data_file.exists():')
+                lines.append(f'{base_indent}    _data_store = {{}}')
+                lines.append(f'{base_indent}else:')
+                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
+                lines.append(f'{base_indent}        _data_store = json.load(_f)')
+                lines.append(f'{base_indent}_data_store[{key}] = {value}')
+                lines.append(f'{base_indent}with open(_data_file, "w", encoding="utf-8") as _f:')
+                lines.append(f'{base_indent}    json.dump(_data_store, _f, ensure_ascii=False, indent=2)')
+            elif operation == "load":
+                lines.append(f'{base_indent}if _data_file.exists():')
+                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
+                lines.append(f'{base_indent}        _data_store = json.load(_f)')
+                lines.append(f'{base_indent}    {save_to} = _data_store.get({key})')
+                lines.append(f'{base_indent}else:')
+                lines.append(f'{base_indent}    {save_to} = None')
+            elif operation == "delete":
+                lines.append(f'{base_indent}if _data_file.exists():')
+                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
+                lines.append(f'{base_indent}        _data_store = json.load(_f)')
+                lines.append(f'{base_indent}    if {key} in _data_store:')
+                lines.append(f'{base_indent}        del _data_store[{key}]')
+                lines.append(f'{base_indent}        with open(_data_file, "w", encoding="utf-8") as _f:')
+                lines.append(f'{base_indent}            json.dump(_data_store, _f, ensure_ascii=False, indent=2)')
+            elif operation == "exists":
+                lines.append(f'{base_indent}_exists_result = False')
+                lines.append(f'{base_indent}if _data_file.exists():')
+                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
+                lines.append(f'{base_indent}        _data_store = json.load(_f)')
+                lines.append(f'{base_indent}    _exists_result = {key} in _data_store')
+        
+        elif block_type == "util.format_string":
+            template = self._render_template(params.get("template", ""), self.class_vars)
+            save_to = params.get("save_to", "formatted_str")
+            lines.append(f"{base_indent}{save_to} = {template}")
+        
+        elif block_type == "util.json_parse":
+            operation = params.get("operation", "parse")
+            json_string_raw = params.get("json_string", "")
+            path = params.get("path", "")
+            save_to = params.get("save_to", "json_result")
+            
+            # JSON字符串需要特殊处理，避免f-string冲突
+            if json_string_raw.startswith('"') or json_string_raw.startswith("'"):
+                # 已经是引号包围的字符串
+                json_string = json_string_raw
+            else:
+                # 作为原始字符串处理
+                json_string = f'"""{json_string_raw}"""'
+            
+            if operation == "parse":
+                lines.append(f"{base_indent}import json")
+                lines.append(f"{base_indent}{save_to} = json.loads({json_string})")
+            elif operation == "get":
+                lines.append(f"{base_indent}import json")
+                lines.append(f"{base_indent}_json_obj = json.loads({json_string})")
+                # 简化路径解析
+                path_parts = path.replace("[", ".").replace("]", "").split(".")
+                for part in path_parts:
+                    if part:
+                        if part.isdigit():
+                            lines.append(f"{base_indent}_json_obj = _json_obj[{part}]")
+                        else:
+                            lines.append(f'{base_indent}_json_obj = _json_obj["{part}"]')
+                lines.append(f"{base_indent}{save_to} = _json_obj")
+            elif operation == "stringify":
+                lines.append(f"{base_indent}import json")
+                lines.append(f"{base_indent}{save_to} = json.dumps({json_string}, ensure_ascii=False, indent=2)")
+        
+        elif block_type == "util.debug_log":
+            variables = params.get("variables", [])
+            message = params.get("message", "")
+            lines.append(f'{base_indent}logger.debug("=== Debug Log ===")')
+            if message:
+                lines.append(f'{base_indent}logger.debug("Message: " + {repr(message)})')
+            for var in variables:
+                # 如果是类成员变量，添加self.前缀
+                var_ref = f"self.{var}" if var in self.class_vars else var
+                lines.append(f'{base_indent}logger.debug("{var} = " + str({var_ref}))')
+            lines.append(f'{base_indent}logger.debug("=================")')
+        
+        elif block_type == "util.http_build":
+            http_params = params.get("params", {})
+            save_to = params.get("save_to", "http_params")
+            lines.append(f"{base_indent}from urllib.parse import urlencode")
+            lines.append(f"{base_indent}{save_to} = urlencode({http_params})")
+        
+        elif block_type == "util.string_operation":
+            operation = params.get("operation", "strip")
+            string = self._render_template(params.get("string", ""), self.class_vars)
+            save_to = params.get("save_to", "str_result")
+            
+            if operation == "upper":
+                lines.append(f"{base_indent}{save_to} = {string}.upper()")
+            elif operation == "lower":
+                lines.append(f"{base_indent}{save_to} = {string}.lower()")
+            elif operation == "strip":
+                lines.append(f"{base_indent}{save_to} = {string}.strip()")
+            elif operation == "split":
+                separator = params.get("separator", " ")
+                lines.append(f'{base_indent}{save_to} = {string}.split("{separator}")')
+            elif operation == "join":
+                separator = params.get("separator", " ")
+                items = params.get("items", "[]")
+                lines.append(f'{base_indent}{save_to} = "{separator}".join({items})')
+            elif operation == "replace":
+                old = params.get("old", "")
+                new = params.get("new", "")
+                lines.append(f'{base_indent}{save_to} = {string}.replace("{old}", "{new}")')
+            elif operation == "substring":
+                start = params.get("start", 0)
+                end = params.get("end", -1)
+                if end == -1:
+                    lines.append(f"{base_indent}{save_to} = {string}[{start}:]")
+                else:
+                    lines.append(f"{base_indent}{save_to} = {string}[{start}:{end}]")
+            elif operation == "length":
+                lines.append(f"{base_indent}{save_to} = len({string})")
+            elif operation == "contains":
+                search = params.get("search", "")
+                lines.append(f'{base_indent}{save_to} = "{search}" in {string}')
+        
+        elif block_type == "util.file_operation":
+            operation = params.get("operation", "read")
+            path = self._render_template(params.get("path", ""), self.class_vars)
+            content = self._render_template(params.get("content", ""), self.class_vars)
+            encoding = params.get("encoding", "utf-8")
+            save_to = params.get("save_to", "file_content")
+            
+            lines.append(f"{base_indent}from pathlib import Path")
+            lines.append(f"{base_indent}_file_path = Path(__file__).parent / {path}")
+            
+            if operation == "read":
+                lines.append(f"{base_indent}if _file_path.exists():")
+                lines.append(f'{base_indent}    with open(_file_path, "r", encoding="{encoding}") as _f:')
+                lines.append(f"{base_indent}        {save_to} = _f.read()")
+                lines.append(f"{base_indent}else:")
+                lines.append(f"{base_indent}    {save_to} = None")
+            elif operation == "write":
+                lines.append(f'{base_indent}with open(_file_path, "w", encoding="{encoding}") as _f:')
+                lines.append(f"{base_indent}    _f.write({content})")
+            elif operation == "append":
+                lines.append(f'{base_indent}with open(_file_path, "a", encoding="{encoding}") as _f:')
+                lines.append(f"{base_indent}    _f.write({content})")
+            elif operation == "exists":
+                lines.append(f"{base_indent}_exists_result = _file_path.exists()")
+            elif operation == "delete":
+                lines.append(f"{base_indent}if _file_path.exists():")
+                lines.append(f"{base_indent}    _file_path.unlink()")
+            elif operation == "list_dir":
+                lines.append(f"{base_indent}if _file_path.exists() and _file_path.is_dir():")
+                lines.append(f"{base_indent}    {save_to} = [f.name for f in _file_path.iterdir()]")
+                lines.append(f"{base_indent}else:")
+                lines.append(f"{base_indent}    {save_to} = []")
+        
+        elif block_type == "util.regex_extract":
+            import re
+            operation = params.get("operation", "search")
+            pattern = params.get("pattern", "")
+            text = self._render_template(params.get("text", ""), self.class_vars)
+            replacement = params.get("replacement", "")
+            save_to = params.get("save_to", "regex_result")
+            
+            lines.append(f"{base_indent}import re")
+            if operation == "match":
+                lines.append(f'{base_indent}_match = re.match(r"{pattern}", {text})')
+                lines.append(f"{base_indent}{save_to} = _match.groups() if _match else None")
+            elif operation == "search":
+                lines.append(f'{base_indent}_match = re.search(r"{pattern}", {text})')
+                lines.append(f"{base_indent}{save_to} = _match.groups() if _match else None")
+            elif operation == "findall":
+                lines.append(f'{base_indent}{save_to} = re.findall(r"{pattern}", {text})')
+            elif operation == "split":
+                lines.append(f'{base_indent}{save_to} = re.split(r"{pattern}", {text})')
+            elif operation == "sub":
+                lines.append(f'{base_indent}{save_to} = re.sub(r"{pattern}", "{replacement}", {text})')
+        
+        elif block_type == "util.array_operation":
+            operation = params.get("operation", "append")
+            array = params.get("array", "")
+            index = params.get("index", 0)
+            value_raw = params.get("value", "")
+            value_stripped = value_raw.strip()
+            # 检查是否是数值字面量
+            if value_stripped.lstrip('-').replace('.', '', 1).isdigit():
+                value = value_raw
+            else:
+                value = self._render_template(value_raw, self.class_vars)
+            start = params.get("start", 0)
+            end = params.get("end", -1)
+            separator = params.get("separator", ",")
+            save_to = params.get("save_to", "result")
+            
+            # 如果数组是类成员变量，添加self.前缀
+            array_ref = f"self.{array}" if array in self.class_vars else array
+            
+            if operation == "get":
+                lines.append(f"{base_indent}{save_to} = {array_ref}[{index}]")
+            elif operation == "set":
+                lines.append(f"{base_indent}{array_ref}[{index}] = {value}")
+            elif operation == "append":
+                lines.append(f"{base_indent}{array_ref}.append({value})")
+            elif operation == "insert":
+                lines.append(f"{base_indent}{array_ref}.insert({index}, {value})")
+            elif operation == "remove":
+                lines.append(f"{base_indent}{array_ref}.remove({value})")
+            elif operation == "pop":
+                lines.append(f"{base_indent}{save_to} = {array_ref}.pop({index})")
+            elif operation == "length":
+                lines.append(f"{base_indent}{save_to} = len({array_ref})")
+            elif operation == "contains":
+                lines.append(f"{base_indent}{save_to} = {value} in {array_ref}")
+            elif operation == "index":
+                lines.append(f"{base_indent}{save_to} = {array_ref}.index({value}) if {value} in {array_ref} else -1")
+            elif operation == "slice":
+                if end == -1:
+                    lines.append(f"{base_indent}{save_to} = {array_ref}[{start}:]")
+                else:
+                    lines.append(f"{base_indent}{save_to} = {array_ref}[{start}:{end}]")
+            elif operation == "sort":
+                lines.append(f"{base_indent}{array_ref}.sort()")
+            elif operation == "reverse":
+                lines.append(f"{base_indent}{array_ref}.reverse()")
+            elif operation == "join":
+                lines.append(f'{base_indent}{save_to} = "{separator}".join(str(x) for x in {array_ref})')
+            elif operation == "unique":
+                lines.append(f"{base_indent}{save_to} = list(set({array_ref}))")
+            elif operation == "extend":
+                lines.append(f"{base_indent}{array_ref}.extend({value})")
+        
+        elif block_type == "util.type_convert":
+            operation = params.get("operation", "to_str")
+            value = self._render_template(params.get("value", ""), self.class_vars)
+            default_value = params.get("default_value", "")
+            save_to = params.get("save_to", "converted")
+            
+            # 跟踪转换后的变量作为类成员
+            self.class_vars.add(save_to)
+            
+            if operation == "to_int":
+                lines.append(f"{base_indent}try:")
+                lines.append(f"{base_indent}    self.{save_to} = int({value})")
+                lines.append(f"{base_indent}except:")
+                lines.append(f"{base_indent}    self.{save_to} = {default_value or 0}")
+            elif operation == "to_float":
+                lines.append(f"{base_indent}try:")
+                lines.append(f"{base_indent}    self.{save_to} = float({value})")
+                lines.append(f"{base_indent}except:")
+                lines.append(f"{base_indent}    self.{save_to} = {default_value or 0.0}")
+            elif operation == "to_str":
+                lines.append(f"{base_indent}self.{save_to} = str({value})")
+            elif operation == "to_bool":
+                lines.append(f"{base_indent}self.{save_to} = bool({value})")
+            elif operation == "to_list":
+                lines.append(f"{base_indent}import json")
+                lines.append(f"{base_indent}try:")
+                lines.append(f"{base_indent}    self.{save_to} = json.loads({value}) if isinstance({value}, str) else list({value})")
+                lines.append(f"{base_indent}except:")
+                lines.append(f"{base_indent}    self.{save_to} = []")
+            elif operation == "to_dict":
+                lines.append(f"{base_indent}import json")
+                lines.append(f"{base_indent}try:")
+                lines.append(f"{base_indent}    self.{save_to} = json.loads({value})")
+                lines.append(f"{base_indent}except:")
+                lines.append(f"{base_indent}    self.{save_to} = {{}}")
+        
+        elif block_type == "action.send_private":
+            user_id = params.get("user_id", "")
+            content = self._render_template(params.get("content", ""), self.class_vars)
+            lines.append(f"{base_indent}from astrbot.api.event import MessageChain")
+            lines.append(f'{base_indent}_target_user = "{user_id}"')
+            lines.append(f"{base_indent}_chain = MessageChain().message({content})")
+            lines.append(f"{base_indent}await self.context.send_private_message(_target_user, _chain)")
+        
+        elif block_type == "action.get_member_list":
+            save_to = params.get("save_to", "member_list")
+            lines.append(f"{base_indent}group = await event.get_group()")
+            lines.append(f"{base_indent}if group:")
+            lines.append(f"{base_indent}    {save_to} = await group.get_member_list()")
+            lines.append(f"{base_indent}    _member_count = len({save_to})")
+            lines.append(f"{base_indent}else:")
+            lines.append(f"{base_indent}    {save_to} = []")
+            lines.append(f"{base_indent}    _member_count = 0")
         
         else:
             lines.append(f"{base_indent}# Unknown block type: {block_type}")

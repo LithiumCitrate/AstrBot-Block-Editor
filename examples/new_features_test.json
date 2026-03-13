@@ -1,0 +1,218 @@
+{
+  "metadata": {
+    "name": "new_features_test",
+    "display_name": "New Features Test",
+    "author": "AstrBot Developer",
+    "description": "测试新增功能：头像获取、群描述、开头/结尾匹配、变量运算、卡片消息、数据存储",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {"name": "score", "type": "int", "default": 0},
+    {"name": "user_data", "type": "dict", "default": {}}
+  ],
+  "handlers": [
+    {
+      "id": "avatar_test",
+      "name": "avatar",
+      "description": "获取用户头像",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "avatar"}
+      },
+      "flow": [
+        {
+          "id": "get_avatar",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "avatar", "save_to": "avatar_url"}
+        },
+        {
+          "id": "get_name",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "name", "save_to": "user_name"}
+        },
+        {
+          "id": "reply",
+          "block": "action.reply_text",
+          "params": {"text": "{user_name} 的头像: {avatar_url}"}
+        }
+      ]
+    },
+    {
+      "id": "group_desc_test",
+      "name": "groupdesc",
+      "description": "获取群描述",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "groupdesc"}
+      },
+      "flow": [
+        {
+          "id": "get_desc",
+          "block": "util.get_group_info",
+          "params": {"info_type": "description", "save_to": "group_desc"}
+        },
+        {
+          "id": "reply_desc",
+          "block": "action.reply_text",
+          "params": {"text": "群描述: {group_desc}"}
+        }
+      ]
+    },
+    {
+      "id": "start_with_test",
+      "name": "start_with",
+      "description": "开头匹配测试",
+      "trigger": {
+        "block": "trigger.start_with",
+        "params": {"prefix": "计算", "case_sensitive": false}
+      },
+      "flow": [
+        {
+          "id": "add_score",
+          "block": "util.variable",
+          "params": {"operation": "add", "name": "score", "value": "10"}
+        },
+        {
+          "id": "reply_score",
+          "block": "action.reply_text",
+          "params": {"text": "分数增加10，当前分数: {score}"}
+        }
+      ]
+    },
+    {
+      "id": "end_with_test",
+      "name": "end_with",
+      "description": "结尾匹配测试",
+      "trigger": {
+        "block": "trigger.end_with",
+        "params": {"suffix": "结束", "case_sensitive": false}
+      },
+      "flow": [
+        {
+          "id": "subtract_score",
+          "block": "util.variable",
+          "params": {"operation": "subtract", "name": "score", "value": "5"}
+        },
+        {
+          "id": "reply_final",
+          "block": "action.reply_text",
+          "params": {"text": "分数减少5，最终分数: {score}"}
+        }
+      ]
+    },
+    {
+      "id": "math_test",
+      "name": "math",
+      "description": "数学运算测试",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "math"}
+      },
+      "flow": [
+        {
+          "id": "set_val",
+          "block": "util.variable",
+          "params": {"operation": "set", "name": "score", "value": "100"}
+        },
+        {
+          "id": "multiply",
+          "block": "util.variable",
+          "params": {"operation": "multiply", "name": "score", "value": "2"}
+        },
+        {
+          "id": "divide",
+          "block": "util.variable",
+          "params": {"operation": "divide", "name": "score", "value": "4"}
+        },
+        {
+          "id": "reply_math",
+          "block": "action.reply_text",
+          "params": {"text": "100 * 2 / 4 = {score}"}
+        }
+      ]
+    },
+    {
+      "id": "card_test",
+      "name": "card",
+      "description": "卡片消息测试",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "card"}
+      },
+      "flow": [
+        {
+          "id": "send_card",
+          "block": "action.reply_card",
+          "params": {
+            "title": "欢迎卡片",
+            "content": "这是一个由 AstrBot Block Editor 生成的卡片消息！",
+            "image_url": "https://example.com/welcome.png",
+            "url": "https://astrbot.app"
+          }
+        }
+      ]
+    },
+    {
+      "id": "data_save_test",
+      "name": "save",
+      "description": "保存数据测试",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "save"}
+      },
+      "flow": [
+        {
+          "id": "get_uid",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "id", "save_to": "uid"}
+        },
+        {
+          "id": "save_data",
+          "block": "util.data_store",
+          "params": {
+            "operation": "save",
+            "key": "{uid}",
+            "value": "{\"name\": \"{sender_name}\", \"score\": {score}}",
+            "file_name": "user_scores.json"
+          }
+        },
+        {
+          "id": "reply_saved",
+          "block": "action.reply_text",
+          "params": {"text": "数据已保存！"}
+        }
+      ]
+    },
+    {
+      "id": "data_load_test",
+      "name": "load",
+      "description": "加载数据测试",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "load"}
+      },
+      "flow": [
+        {
+          "id": "get_uid2",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "id", "save_to": "uid"}
+        },
+        {
+          "id": "load_data",
+          "block": "util.data_store",
+          "params": {
+            "operation": "load",
+            "key": "{uid}",
+            "save_to": "user_data",
+            "file_name": "user_scores.json"
+          }
+        },
+        {
+          "id": "reply_loaded",
+          "block": "action.reply_text",
+          "params": {"text": "加载数据: {user_data}"}
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,517 @@
+{
+  "metadata": {
+    "name": "full_test",
+    "display_name": "Full Features Test",
+    "author": "AstrBot Developer",
+    "description": "测试所有新增功能块",
+    "version": "1.0.0"
+  },
+  "variables": [
+    {"name": "counter", "type": "int", "default": 0},
+    {"name": "items", "type": "list", "default": []},
+    {"name": "user_data", "type": "dict", "default": {}}
+  ],
+  "handlers": [
+    {
+      "id": "test_start_with",
+      "name": "test_start",
+      "description": "测试开头匹配",
+      "trigger": {
+        "block": "trigger.start_with",
+        "params": {"prefix": "test", "case_sensitive": false}
+      },
+      "flow": [
+        {
+          "id": "reply1",
+          "block": "action.reply_text",
+          "params": {"text": "开头匹配成功: {remaining}"}
+        }
+      ]
+    },
+    {
+      "id": "test_end_with",
+      "name": "test_end",
+      "description": "测试结尾匹配",
+      "trigger": {
+        "block": "trigger.end_with",
+        "params": {"suffix": "结束", "case_sensitive": false}
+      },
+      "flow": [
+        {
+          "id": "reply2",
+          "block": "action.reply_text",
+          "params": {"text": "结尾匹配成功"}
+        }
+      ]
+    },
+    {
+      "id": "test_avatar",
+      "name": "avatar",
+      "description": "测试获取头像",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "avatar"}
+      },
+      "flow": [
+        {
+          "id": "get_avatar",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "avatar", "save_to": "avatar_url"}
+        },
+        {
+          "id": "reply_avatar",
+          "block": "action.reply_text",
+          "params": {"text": "头像URL: {avatar_url}"}
+        }
+      ]
+    },
+    {
+      "id": "test_group_desc",
+      "name": "groupdesc",
+      "description": "测试获取群描述",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "groupdesc"}
+      },
+      "flow": [
+        {
+          "id": "get_desc",
+          "block": "util.get_group_info",
+          "params": {"info_type": "description", "save_to": "desc"}
+        },
+        {
+          "id": "reply_desc",
+          "block": "action.reply_text",
+          "params": {"text": "群描述: {desc}"}
+        }
+      ]
+    },
+    {
+      "id": "test_is_admin",
+      "name": "isadmin",
+      "description": "测试权限检查",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "isadmin"}
+      },
+      "flow": [
+        {
+          "id": "check_admin",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "is_admin", "save_to": "is_admin"}
+        },
+        {
+          "id": "reply_admin",
+          "block": "action.reply_text",
+          "params": {"text": "是否管理员: {is_admin}"}
+        }
+      ]
+    },
+    {
+      "id": "test_math",
+      "name": "math",
+      "description": "测试数学运算",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "math"}
+      },
+      "flow": [
+        {
+          "id": "set_val",
+          "block": "util.variable",
+          "params": {"operation": "set", "name": "counter", "value": "100"}
+        },
+        {
+          "id": "add_val",
+          "block": "util.variable",
+          "params": {"operation": "add", "name": "counter", "value": "50"}
+        },
+        {
+          "id": "sub_val",
+          "block": "util.variable",
+          "params": {"operation": "subtract", "name": "counter", "value": "30"}
+        },
+        {
+          "id": "mul_val",
+          "block": "util.variable",
+          "params": {"operation": "multiply", "name": "counter", "value": "2"}
+        },
+        {
+          "id": "div_val",
+          "block": "util.variable",
+          "params": {"operation": "divide", "name": "counter", "value": "4"}
+        },
+        {
+          "id": "reply_math",
+          "block": "action.reply_text",
+          "params": {"text": "计算结果: (100+50-30)*2/4 = {counter}"}
+        }
+      ]
+    },
+    {
+      "id": "test_card",
+      "name": "card",
+      "description": "测试卡片消息",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "card"}
+      },
+      "flow": [
+        {
+          "id": "send_card",
+          "block": "action.reply_card",
+          "params": {
+            "title": "测试卡片",
+            "content": "这是一个测试卡片消息",
+            "image_url": "https://example.com/test.png",
+            "url": "https://astrbot.app"
+          }
+        }
+      ]
+    },
+    {
+      "id": "test_face",
+      "name": "face",
+      "description": "测试表情回复",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "face"}
+      },
+      "flow": [
+        {
+          "id": "send_face",
+          "block": "action.reply_face",
+          "params": {"face_id": "1"}
+        }
+      ]
+    },
+    {
+      "id": "test_data_store",
+      "name": "savedata",
+      "description": "测试数据存储",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "savedata"}
+      },
+      "flow": [
+        {
+          "id": "get_uid",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "id", "save_to": "uid"}
+        },
+        {
+          "id": "save_data",
+          "block": "util.data_store",
+          "params": {
+            "operation": "save",
+            "key": "{uid}",
+            "value": "{\"score\": 100}",
+            "file_name": "test_data.json"
+          }
+        },
+        {
+          "id": "reply_saved",
+          "block": "action.reply_text",
+          "params": {"text": "数据已保存"}
+        }
+      ]
+    },
+    {
+      "id": "test_load_data",
+      "name": "loaddata",
+      "description": "测试加载数据",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "loaddata"}
+      },
+      "flow": [
+        {
+          "id": "get_uid2",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "id", "save_to": "uid"}
+        },
+        {
+          "id": "load_data",
+          "block": "util.data_store",
+          "params": {
+            "operation": "load",
+            "key": "{uid}",
+            "save_to": "loaded",
+            "file_name": "test_data.json"
+          }
+        },
+        {
+          "id": "reply_loaded",
+          "block": "action.reply_text",
+          "params": {"text": "加载数据: {loaded}"}
+        }
+      ]
+    },
+    {
+      "id": "test_string_ops",
+      "name": "string",
+      "description": "测试字符串操作",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "string"}
+      },
+      "flow": [
+        {
+          "id": "upper_str",
+          "block": "util.string_operation",
+          "params": {"operation": "upper", "string": "hello world", "save_to": "upper_result"}
+        },
+        {
+          "id": "split_str",
+          "block": "util.string_operation",
+          "params": {"operation": "split", "string": "{upper_result}", "separator": " ", "save_to": "words"}
+        },
+        {
+          "id": "reply_string",
+          "block": "action.reply_text",
+          "params": {"text": "分割结果: {words}"}
+        }
+      ]
+    },
+    {
+      "id": "test_array_ops",
+      "name": "array",
+      "description": "测试数组操作",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "array"}
+      },
+      "flow": [
+        {
+          "id": "init_array",
+          "block": "util.variable",
+          "params": {"operation": "set", "name": "items", "value": "[1, 2, 3, 4, 5]"}
+        },
+        {
+          "id": "append_item",
+          "block": "util.array_operation",
+          "params": {"operation": "append", "array": "items", "value": "6"}
+        },
+        {
+          "id": "get_length",
+          "block": "util.array_operation",
+          "params": {"operation": "length", "array": "items", "save_to": "len_result"}
+        },
+        {
+          "id": "reply_array",
+          "block": "action.reply_text",
+          "params": {"text": "数组长度: {len_result}, 内容: {items}"}
+        }
+      ]
+    },
+    {
+      "id": "test_regex",
+      "name": "regex",
+      "description": "测试正则提取",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "regex"}
+      },
+      "flow": [
+        {
+          "id": "regex_search",
+          "block": "util.regex_extract",
+          "params": {
+            "operation": "search",
+            "pattern": "(\\d+)",
+            "text": "用户ID: 12345, 分数: 100",
+            "save_to": "matches"
+          }
+        },
+        {
+          "id": "reply_regex",
+          "block": "action.reply_text",
+          "params": {"text": "匹配结果: {matches}"}
+        }
+      ]
+    },
+    {
+      "id": "test_type_convert",
+      "name": "convert",
+      "description": "测试类型转换",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "convert"}
+      },
+      "flow": [
+        {
+          "id": "to_int",
+          "block": "util.type_convert",
+          "params": {"operation": "to_int", "value": "123", "save_to": "int_val"}
+        },
+        {
+          "id": "add_int",
+          "block": "util.variable",
+          "params": {"operation": "add", "name": "int_val", "value": "1"}
+        },
+        {
+          "id": "reply_convert",
+          "block": "action.reply_text",
+          "params": {"text": "转换后+1 = {int_val}"}
+        }
+      ]
+    },
+    {
+      "id": "test_file_ops",
+      "name": "file",
+      "description": "测试文件操作",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "file"}
+      },
+      "flow": [
+        {
+          "id": "write_file",
+          "block": "util.file_operation",
+          "params": {
+            "operation": "write",
+            "path": "test.txt",
+            "content": "Hello AstrBot!"
+          }
+        },
+        {
+          "id": "read_file",
+          "block": "util.file_operation",
+          "params": {
+            "operation": "read",
+            "path": "test.txt",
+            "save_to": "file_content"
+          }
+        },
+        {
+          "id": "reply_file",
+          "block": "action.reply_text",
+          "params": {"text": "文件内容: {file_content}"}
+        }
+      ]
+    },
+    {
+      "id": "test_json_parse",
+      "name": "json",
+      "description": "测试JSON解析",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "json"}
+      },
+      "flow": [
+        {
+          "id": "parse_json",
+          "block": "util.json_parse",
+          "params": {
+            "operation": "parse",
+            "json_string": "{\"name\": \"test\", \"value\": 123}",
+            "save_to": "parsed"
+          }
+        },
+        {
+          "id": "reply_json",
+          "block": "action.reply_text",
+          "params": {"text": "解析结果: {parsed}"}
+        }
+      ]
+    },
+    {
+      "id": "test_format_string",
+      "name": "format",
+      "description": "测试字符串格式化",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "format"}
+      },
+      "flow": [
+        {
+          "id": "get_name",
+          "block": "util.get_sender_info",
+          "params": {"info_type": "name", "save_to": "user_name"}
+        },
+        {
+          "id": "format_str",
+          "block": "util.format_string",
+          "params": {
+            "template": "你好, {user_name}! 欢迎使用AstrBot.",
+            "save_to": "greeting"
+          }
+        },
+        {
+          "id": "reply_format",
+          "block": "action.reply_text",
+          "params": {"text": "{greeting}"}
+        }
+      ]
+    },
+    {
+      "id": "test_debug_log",
+      "name": "debug",
+      "description": "测试调试日志",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "debug"}
+      },
+      "flow": [
+        {
+          "id": "set_debug_var",
+          "block": "util.variable",
+          "params": {"operation": "set", "name": "counter", "value": "42"}
+        },
+        {
+          "id": "log_debug",
+          "block": "util.debug_log",
+          "params": {
+            "variables": ["counter"],
+            "message": "调试测试"
+          }
+        },
+        {
+          "id": "reply_debug",
+          "block": "action.reply_text",
+          "params": {"text": "调试日志已输出"}
+        }
+      ]
+    },
+    {
+      "id": "test_goto_label",
+      "name": "goto",
+      "description": "测试跳转标签",
+      "trigger": {
+        "block": "trigger.command",
+        "params": {"command": "goto"}
+      },
+      "flow": [
+        {
+          "id": "label_start",
+          "block": "action.label",
+          "params": {"label": "start"}
+        },
+        {
+          "id": "increment",
+          "block": "util.variable",
+          "params": {"operation": "increment", "name": "counter"}
+        },
+        {
+          "id": "check_loop",
+          "block": "logic.if",
+          "params": {"condition": "{counter} < 3"},
+          "branches": {
+            "true": [
+              {
+                "id": "jump_back",
+                "block": "action.goto",
+                "params": {"label": "start"}
+              }
+            ]
+          }
+        },
+        {
+          "id": "reply_goto",
+          "block": "action.reply_text",
+          "params": {"text": "循环结束, counter = {counter}"}
+        }
+      ]
+    }
+  ]
+}
