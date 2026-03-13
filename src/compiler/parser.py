@@ -4,8 +4,8 @@
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -83,44 +83,44 @@ class WorkflowAST:
 
 class WorkflowParser:
     """工作流解析器"""
-    
+
     def __init__(self, block_definitions: dict[str, Any] | None = None):
         self.block_definitions = block_definitions or {}
         self.errors: list[str] = []
         self.warnings: list[str] = []
-    
+
     def load_block_definitions(self, path: str | Path) -> None:
         """加载块定义"""
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
             self.block_definitions = data.get("blocks", {})
-    
+
     def parse_file(self, path: str | Path) -> WorkflowAST:
         """解析工作流文件"""
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return self.parse(data)
-    
+
     def parse(self, data: dict[str, Any]) -> WorkflowAST:
         """解析工作流数据"""
         self.errors = []
         self.warnings = []
-        
+
         # 解析元数据
         metadata = self._parse_metadata(data.get("metadata", {}))
-        
+
         # 解析变量
         variables = [self._parse_variable(v) for v in data.get("variables", [])]
-        
+
         # 解析配置
         config_items = [self._parse_config_item(c) for c in data.get("config", {}).get("items", [])]
-        
+
         # 解析Handler
         handlers = [self._parse_handler(h) for h in data.get("handlers", [])]
-        
+
         # 解析导入
         imports = data.get("imports", [])
-        
+
         return WorkflowAST(
             metadata=metadata,
             handlers=handlers,
@@ -130,14 +130,14 @@ class WorkflowParser:
             init_code=data.get("init_code", ""),
             terminate_code=data.get("terminate_code", "")
         )
-    
+
     def _parse_metadata(self, data: dict[str, Any]) -> WorkflowMetadata:
         """解析元数据"""
         required = ["name", "author", "description", "version"]
         for field_name in required:
             if field_name not in data:
                 self.errors.append(f"缺少必需的元数据字段: {field_name}")
-        
+
         return WorkflowMetadata(
             name=data.get("name", "unnamed"),
             author=data.get("author", "unknown"),
@@ -147,7 +147,7 @@ class WorkflowParser:
             repo=data.get("repo", ""),
             logo=data.get("logo", "")
         )
-    
+
     def _parse_variable(self, data: dict[str, Any]) -> VariableDefinition:
         """解析变量定义"""
         return VariableDefinition(
@@ -157,7 +157,7 @@ class WorkflowParser:
             persistent=data.get("persistent", False),
             description=data.get("description", "")
         )
-    
+
     def _parse_config_item(self, data: dict[str, Any]) -> ConfigItem:
         """解析配置项"""
         return ConfigItem(
@@ -168,12 +168,12 @@ class WorkflowParser:
             hint=data.get("hint", ""),
             options=data.get("options", [])
         )
-    
+
     def _parse_handler(self, data: dict[str, Any]) -> HandlerDefinition:
         """解析Handler定义"""
         handler_id = data.get("id", "")
         handler_name = data.get("name", handler_id)
-        
+
         # 解析触发器
         trigger_data = data.get("trigger", {})
         trigger = TriggerConfig(
@@ -181,10 +181,10 @@ class WorkflowParser:
             params=trigger_data.get("params", {}),
             filters=trigger_data.get("filters", [])
         )
-        
+
         # 解析流程
         flow = [self._parse_block_instance(b) for b in data.get("flow", [])]
-        
+
         return HandlerDefinition(
             id=handler_id,
             name=handler_name,
@@ -192,21 +192,21 @@ class WorkflowParser:
             trigger=trigger,
             flow=flow
         )
-    
+
     def _parse_block_instance(self, data: dict[str, Any]) -> BlockInstance:
         """解析块实例"""
         block_id = data.get("id", "")
         block_type = data.get("block", "")
-        
+
         # 验证块类型
         if block_type and block_type not in self.block_definitions:
             self.warnings.append(f"未知的块类型: {block_type} (id: {block_id})")
-        
+
         # 解析分支
         branches = {}
         for branch_name, branch_blocks in data.get("branches", {}).items():
             branches[branch_name] = [self._parse_block_instance(b) for b in branch_blocks]
-        
+
         return BlockInstance(
             id=block_id,
             block_type=block_type,
@@ -214,20 +214,20 @@ class WorkflowParser:
             inputs=data.get("inputs", {}),
             branches=branches
         )
-    
+
     def validate(self, ast: WorkflowAST) -> bool:
         """验证AST"""
         valid = True
-        
+
         # 验证插件名
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", ast.metadata.name):
             self.errors.append(f"无效的插件名: {ast.metadata.name}")
             valid = False
-        
+
         # 验证版本号
         if not re.match(r"^\d+\.\d+\.\d+$", ast.metadata.version):
             self.warnings.append(f"版本号格式不规范: {ast.metadata.version}")
-        
+
         # 验证Handler
         handler_ids = set()
         for handler in ast.handlers:

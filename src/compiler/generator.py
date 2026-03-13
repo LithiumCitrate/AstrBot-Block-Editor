@@ -3,26 +3,23 @@
 """
 import re
 from typing import Any
-from pathlib import Path
 
 from .parser import (
-    WorkflowAST,
-    HandlerDefinition,
     BlockInstance,
-    VariableDefinition,
-    ConfigItem,
+    HandlerDefinition,
+    WorkflowAST,
 )
 
 
 class CodeGenerator:
     """代码生成器"""
-    
+
     def __init__(self, block_definitions: dict[str, Any] | None = None):
         self.block_definitions = block_definitions or {}
         self.indent = "    "  # 4空格缩进
         self.indent_level = 0
         self.class_vars: set[str] = set()  # 类成员变量名集合
-    
+
     def generate(self, ast: WorkflowAST) -> dict[str, str]:
         """生成所有文件"""
         return {
@@ -30,35 +27,35 @@ class CodeGenerator:
             "metadata.yaml": self._generate_metadata_yaml(ast),
             "_conf_schema.json": self._generate_conf_schema(ast) if ast.config_items else "",
         }
-    
+
     def _generate_main_py(self, ast: WorkflowAST) -> str:
         """生成main.py"""
         lines = []
         
         # 收集类成员变量
         self.class_vars = {var.name for var in ast.variables}
-        
+
         # 1. 导入语句
         lines.extend(self._generate_imports(ast))
         lines.append("")
-        
+
         # 2. 插件类
         lines.append(f"class {self._to_class_name(ast.metadata.name)}(star.Star):")
         lines.append(f'    """{ast.metadata.description}"""')
         lines.append("")
-        
+
         # 3. __init__方法
         lines.extend(self._generate_init(ast))
         lines.append("")
-        
+
         # 4. Handler方法
         for handler in ast.handlers:
             lines.extend(self._generate_handler(handler, ast))
             lines.append("")
-        
+
         # 5. terminate方法
         lines.extend(self._generate_terminate(ast))
-        
+
         return "\n".join(lines)
     
     def _generate_imports(self, ast: WorkflowAST) -> list[str]:
@@ -71,7 +68,7 @@ class CodeGenerator:
             "import random",
             "from datetime import datetime",
         ]
-        
+
         # 添加额外导入
         for imp in ast.imports:
             module = imp.get("module", "")
@@ -80,12 +77,12 @@ class CodeGenerator:
                 imports.append(f"from {module} import {', '.join(items)}")
             elif module:
                 imports.append(f"import {module}")
-        
+
         # 检查是否需要额外导入
         for handler in ast.handlers:
             for block in handler.flow:
                 self._check_imports_for_block(block, imports)
-        
+
         return list(set(imports))  # 去重
     
     def _check_imports_for_block(self, block: BlockInstance, imports: list[str]) -> None:
@@ -96,80 +93,80 @@ class CodeGenerator:
         elif block.block_type == "action.reply_chain":
             if "import astrbot.api.message_components as Comp" not in imports:
                 imports.append("import astrbot.api.message_components as Comp")
-        
+
         # 检查分支
         for branch_blocks in block.branches.values():
             for branch_block in branch_blocks:
                 self._check_imports_for_block(branch_block, imports)
-    
+
     def _generate_init(self, ast: WorkflowAST) -> list[str]:
         """生成__init__方法"""
         lines = []
         lines.append(f"{self.indent}def __init__(self, context: star.Context) -> None:")
         lines.append(f"{self.indent}{self.indent}self.context = context")
-        
+
         # 初始化变量
         for var in ast.variables:
             default = self._format_default_value(var.default, var.var_type)
             lines.append(f"{self.indent}{self.indent}self.{var.name} = {default}")
-        
+
         # 用户自定义初始化代码
         if ast.init_code:
             for line in ast.init_code.split("\n"):
                 lines.append(f"{self.indent}{self.indent}{line}")
-        
+
         return lines
     
     def _generate_handler(self, handler: HandlerDefinition, ast: WorkflowAST) -> list[str]:
         """生成Handler方法"""
         lines = []
-        
+
         # 生成装饰器
         decorators = self._generate_decorators(handler)
         lines.extend(decorators)
-        
+
         # 方法签名
         method_name = handler.name or f"handler_{handler.id}"
         has_event_param = handler.trigger.block_type not in ["trigger.on_loaded"]
-        
+
         if has_event_param:
             lines.append(f"{self.indent}async def {method_name}(self, event: AstrMessageEvent):")
         else:
             lines.append(f"{self.indent}async def {method_name}(self):")
-        
+
         # Docstring
         desc = handler.description or f"{handler.trigger.block_type} 处理器"
         lines.append(f'{self.indent}{self.indent}"""{desc}"""')
-        
+
         # 方法体
         body_lines = self._generate_handler_body(handler, ast)
         lines.extend(body_lines)
-        
+
         return lines
     
     def _generate_decorators(self, handler: HandlerDefinition) -> list[str]:
         """生成装饰器"""
         decorators = []
         trigger = handler.trigger
-        
+
         # 主触发器装饰器
         decorator = self._trigger_to_decorator(trigger)
         if decorator:
             decorators.append(f"{self.indent}{decorator}")
-        
+
         # 额外过滤器装饰器
         for f in trigger.filters:
             filter_decorator = self._filter_to_decorator(f)
             if filter_decorator:
                 decorators.append(f"{self.indent}{filter_decorator}")
-        
+
         return decorators
     
     def _trigger_to_decorator(self, trigger: Any) -> str:
         """将触发器转换为装饰器"""
         block_type = trigger.block_type
         params = trigger.params
-        
+
         if block_type == "trigger.command":
             cmd = params.get("command", "")
             alias = params.get("alias", [])
@@ -181,43 +178,43 @@ class CodeGenerator:
         elif block_type == "trigger.regex":
             pattern = params.get("pattern", "")
             return f'@filter.regex(r"{pattern}")'
-        
+
         elif block_type == "trigger.event_message_type":
             msg_type = params.get("message_type", "ALL")
             return f"@filter.event_message_type(filter.EventMessageType.{msg_type})"
-        
+
         elif block_type == "trigger.platform":
             platforms = params.get("platforms", ["ALL"])
             platform_strs = [f"filter.PlatformAdapterType.{p}" for p in platforms]
             return f"@filter.platform_adapter_type({' | '.join(platform_strs)})"
-        
+
         elif block_type == "trigger.permission":
             perm = params.get("permission", "ADMIN")
             raise_error = params.get("raise_error", True)
             return f"@filter.permission_type(filter.PermissionType.{perm}, raise_error={raise_error})"
-        
+
         elif block_type == "trigger.on_loaded":
             return "@filter.on_astrbot_loaded()"
-        
+
         elif block_type == "trigger.on_llm_request":
             return "@filter.on_llm_request()"
-        
+
         elif block_type == "trigger.keyword":
             # 关键词触发使用event_message_type + 内部判断
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
-        
+
         elif block_type == "trigger.user_join":
             return "@filter.on_user_join()"
-        
+
         elif block_type == "trigger.user_leave":
             return "@filter.on_user_leave()"
-        
+
         elif block_type == "trigger.file_upload":
             return "@filter.on_file_upload()"
-        
+
         elif block_type == "trigger.reaction":
             return "@filter.on_reaction()"
-        
+
         elif block_type == "trigger.schedule":
             schedule_type = params.get("schedule_type", "interval")
             if schedule_type == "interval":
@@ -233,22 +230,22 @@ class CodeGenerator:
             else:  # cron
                 cron = params.get("cron_expression", "0 9 * * *")
                 return f'@filter.on_schedule(schedule_type="cron", cron="{cron}")'
-        
+
         elif block_type == "trigger.random_chance":
             # 随机概率触发使用event_message_type + 内部判断
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
-        
+
         elif block_type == "trigger.nth_time":
             # 第N次触发使用event_message_type + 内部判断
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
-        
+
         return ""
     
     def _filter_to_decorator(self, f: dict) -> str:
         """将过滤器转换为装饰器"""
         block_type = f.get("block", "")
         params = f.get("params", {})
-        
+
         if block_type == "trigger.event_message_type":
             msg_type = params.get("message_type", "ALL")
             return f"@filter.event_message_type(filter.EventMessageType.{msg_type})"
@@ -259,41 +256,41 @@ class CodeGenerator:
         elif block_type == "trigger.permission":
             perm = params.get("permission", "ADMIN")
             return f"@filter.permission_type(filter.PermissionType.{perm})"
-        
+
         return ""
     
     def _generate_handler_body(self, handler: HandlerDefinition, ast: WorkflowAST) -> list[str]:
         """生成Handler方法体"""
         lines = []
         indent = self.indent * 2  # 方法内二级缩进
-        
+
         # 特殊处理关键词触发
         if handler.trigger.block_type == "trigger.keyword":
             lines.extend(self._generate_keyword_check(handler.trigger.params))
-        
+
         # 特殊处理随机概率触发
         elif handler.trigger.block_type == "trigger.random_chance":
             lines.extend(self._generate_random_chance_check(handler.trigger.params))
-        
+
         # 特殊处理第N次触发
         elif handler.trigger.block_type == "trigger.nth_time":
             lines.extend(self._generate_nth_time_check(handler.trigger.params))
-        
+
         # 生成流程块代码
         for block in handler.flow:
             block_lines = self._generate_block_code(block, indent_level=2)
             lines.extend(block_lines)
-        
+
         # 如果没有生成任何代码，添加pass
         if not lines:
             lines.append(f"{indent}pass")
-        
+
         return lines
     
     def _generate_random_chance_check(self, params: dict) -> list[str]:
         """生成随机概率检查代码"""
         probability = params.get("probability", 50)
-        
+
         lines = []
         indent = self.indent * 2
         
@@ -301,14 +298,14 @@ class CodeGenerator:
         lines.append(f"{indent}rolled = random.randint(1, 100)")
         lines.append(f"{indent}if rolled > {probability}:")
         lines.append(f"{indent}    return")
-        
+
         return lines
     
     def _generate_nth_time_check(self, params: dict) -> list[str]:
         """生成第N次触发检查代码"""
         n = params.get("n", 5)
         counter_key = params.get("counter_key", "global")
-        
+
         lines = []
         indent = self.indent * 2
         
@@ -320,7 +317,7 @@ class CodeGenerator:
         lines.append(f"{indent}self._nth_counter[counter_key] += 1")
         lines.append(f"{indent}if self._nth_counter[counter_key] % {n} != 0:")
         lines.append(f"{indent}    return")
-        
+
         return lines
     
     def _generate_keyword_check(self, params: dict) -> list[str]:
@@ -328,7 +325,7 @@ class CodeGenerator:
         keywords = params.get("keywords", [])
         match_all = params.get("match_all", False)
         case_sensitive = params.get("case_sensitive", False)
-        
+
         lines = []
         indent = self.indent * 2  # 方法内二级缩进
         
@@ -400,7 +397,6 @@ class CodeGenerator:
         
         elif block_type == "action.send_message":
             target_type = params.get("target_type", "current")
-            msg_type = params.get("message_type", "text")
             content = self._render_template(params.get("content", ""), self.class_vars)
             
             if target_type == "current":
@@ -911,7 +907,6 @@ class CodeGenerator:
                 lines.append(f"{base_indent}    {save_to} = []")
         
         elif block_type == "util.regex_extract":
-            import re
             operation = params.get("operation", "search")
             pattern = params.get("pattern", "")
             text = self._render_template(params.get("text", ""), self.class_vars)
