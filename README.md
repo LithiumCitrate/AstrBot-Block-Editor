@@ -5,6 +5,7 @@
 ![AstrBot Block Editor](https://img.shields.io/badge/AstrBot-Block%20Editor-6366f1?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-pytest-blue?style=flat-square)
 
 **可视化 AstrBot 插件开发工具**
 
@@ -18,11 +19,12 @@
 
 ## ✨ 特性
 
-- 🎨 **现代化可视化编辑器** - 毛玻璃效果、流畅动画、深色主题
+- 🎨 **现代化可视化编辑器** - 毛玻璃效果、流畅动画、深色主题（Fluent Design）
 - 🧩 **行为块系统** - 20+ 预定义块，覆盖触发、动作、逻辑、工具四大类
 - 🔗 **智能连接** - 自动吸附、多分支流程、可视化数据流
 - ⚡ **实时编译** - 一键生成完整 AstrBot 插件代码
 - 📦 **一键导出** - 直接导出可部署的插件目录
+- 🧪 **完善测试** - 单元测试覆盖，CI/CD 自动化
 
 ## 📸 截图
 
@@ -133,30 +135,45 @@ python compile.py -i ../examples/hello_plugin.json -o ../output
 ## 📁 项目结构
 
 ```
-AstrBot-BlockCompiler/
-├── DESIGN.md              # 系统设计文档
-├── README.md              # 本文件
-├── examples/              # 示例工作流
+AstrBot-Block-Editor/
+├── .github/
+│   └── workflows/
+│       └── ci.yml            # GitHub Actions CI/CD
+├── DESIGN.md                 # 系统设计文档
+├── LICENSE                   # MIT 许可证
+├── README.md                 # 本文件
+├── pyproject.toml            # 项目配置
+├── examples/                 # 示例工作流
 │   ├── hello_plugin.json
-│   ├── test_all_blocks.json
-│   └── complex_test.json
-├── schemas/               # JSON Schema 定义
-│   ├── blocks.json        # 行为块定义
-│   └── workflow.json      # 工作流格式
-├── src/                   # 编译器核心
-│   ├── compile.py         # CLI 入口
-│   └── compiler/          # 编译器模块
-│       ├── parser.py      # 解析器
-│       ├── analyzer.py    # 语义分析
-│       └── generator.py   # 代码生成
-├── gui/                   # 可视化编辑器
-│   ├── app.py             # PyQt5 桌面应用
-│   ├── requirements.txt
-│   └── web/               # Web 界面
-│       ├── index.html
-│       ├── blocks.js
-│       └── editor.js
-└── output/                # 编译输出目录
+│   ├── advanced_logic.json
+│   └── ...
+├── schemas/                  # JSON Schema 定义
+│   ├── blocks.json           # 行为块定义
+│   └── workflow.json         # 工作流格式
+├── src/                      # 编译器核心
+│   ├── compile.py            # CLI 入口
+│   ├── requirements.txt      # 编译器依赖
+│   └── compiler/             # 编译器模块
+│       ├── __init__.py
+│       ├── parser.py         # 解析器
+│       ├── analyzer.py       # 语义分析
+│       ├── compiler.py       # 编译器协调器
+│       └── generator.py      # 代码生成
+├── gui/                      # 可视化编辑器
+│   ├── app.py                # PyQt5 桌面应用
+│   ├── requirements.txt      # GUI 依赖
+│   └── web/                  # Web 界面
+│       ├── index.html        # 主页面
+│       ├── blocks.js         # 块定义
+│       ├── editor.js         # 编辑器逻辑
+│       └── icons/            # 图标资源
+├── tests/                    # 单元测试
+│   ├── conftest.py           # pytest 配置
+│   ├── test_parser.py        # 解析器测试
+│   ├── test_analyzer.py      # 分析器测试
+│   ├── test_generator.py     # 生成器测试
+│   └── test_compiler.py      # 集成测试
+└── output/                   # 编译输出目录
 ```
 
 ## 🔧 工作流 JSON 格式
@@ -201,7 +218,22 @@ my_plugin/
 
 将此目录放入 AstrBot 的 `addons/plugins/` 即可使用。
 
-## 🤝 贡献
+## � 测试
+
+项目使用 pytest 进行单元测试：
+
+```bash
+# 安装测试依赖
+pip install pytest pytest-cov
+
+# 运行所有测试
+pytest tests/ -v
+
+# 运行测试并生成覆盖率报告
+pytest tests/ -v --cov=src --cov-report=html
+```
+
+## � 贡献
 
 欢迎提交 Issue 和 Pull Request！
 
@@ -211,11 +243,15 @@ my_plugin/
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 创建 Pull Request
 
+## 📜 许可证
+
+本项目采用 [MIT License](LICENSE) 开源协议。
 
 ## 🙏 致谢
 
 - [AstrBot](https://github.com/AstrBotDevs/AstrBot) - 强大的聊天机器人框架
 - [PyQt5](https://www.riverbankcomputing.com/software/pyqt/) - 跨平台 GUI 框架
+- [IconPark](https://iconpark.oceanengine.com/home) - 字节跳动开源图标库
 
 ---
 
@@ -237,18 +273,47 @@ A visual plugin development tool for [AstrBot](https://github.com/AstrBotDevs/As
 
 ### Features
 
-- 🎨 Modern visual editor with glassmorphism effects
+- 🎨 Modern visual editor with Fluent Design and glassmorphism effects
 - 🧩 20+ pre-defined blocks covering triggers, actions, logic, and utilities
 - 🔗 Smart connections with auto-snap and multi-branch flow support
 - ⚡ Real-time compilation to complete AstrBot plugin code
 - 📦 One-click export to deployable plugin directory
+- 🧪 Unit tests with pytest and CI/CD automation
 
 ### Quick Start
 
 ```bash
-# Install dependencies
+# Clone repository
+git clone https://github.com/LithiumCitrate/AstrBot-Block-Editor.git
+cd AstrBot-Block-Editor
+
+# Install GUI dependencies
 pip install PyQt5 PyQtWebEngine
 
 # Launch editor
 cd gui && python app.py
 ```
+
+### CLI Compilation
+
+```bash
+cd src
+python compile.py -i ../examples/hello_plugin.json -o ../output
+```
+
+### Testing
+
+```bash
+pip install pytest pytest-cov
+pytest tests/ -v --cov=src
+```
+
+### License
+
+This project is licensed under the [MIT License](LICENSE).
+
+### Acknowledgments
+
+- [AstrBot](https://github.com/AstrBotDevs/AstrBot) - Powerful chatbot framework
+- [PyQt5](https://www.riverbankcomputing.com/software/pyqt/) - Cross-platform GUI framework
+- [IconPark](https://iconpark.oceanengine.com/home) - ByteDance open-source icon library
