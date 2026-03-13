@@ -126,7 +126,7 @@ class BlockEditor {
         const errors = [];
         
         // 检查是否有触发器
-        const triggers = this.blocks.filter(b => BLOCKS[b.type].type === 'trigger');
+        const triggers = this.blocks.filter(b => BLOCKS[b.type]?.type === 'trigger');
         if (triggers.length === 0 && this.blocks.length > 0) {
             errors.push('缺少触发器：请添加一个触发器块（绿色）');
         }
@@ -139,7 +139,7 @@ class BlockEditor {
         });
         
         const unconnectedBlocks = this.blocks.filter(b => 
-            BLOCKS[b.type].type !== 'trigger' && !connectedIds.has(b.id)
+            BLOCKS[b.type]?.type !== 'trigger' && !connectedIds.has(b.id)
         );
         
         if (unconnectedBlocks.length > 0) {
@@ -149,6 +149,7 @@ class BlockEditor {
         // 检查必填参数
         this.blocks.forEach(b => {
             const blockDef = BLOCKS[b.type];
+            if (!blockDef) return;
             blockDef.params.forEach(p => {
                 if (p.required && !b.params[p.name]) {
                     errors.push(`块「${blockDef.name}」缺少参数：${p.label}`);
@@ -252,7 +253,6 @@ class BlockEditor {
     }
     
     startDragExisting(e, blockInstance) {
-        e.preventDefault();
         e.stopPropagation();
         this.draggedBlock = { type: 'existing', block: blockInstance };
         
@@ -264,6 +264,8 @@ class BlockEditor {
         };
         
         document.getElementById(blockInstance.id).classList.add('dragging');
+        
+        // 立即选中块
         this.selectBlock(blockInstance);
     }
     
@@ -374,13 +376,35 @@ class BlockEditor {
     }
     
     renderBlock(instance) {
-        this.workspaceBlocks.innerHTML += generateWorkspaceBlock(instance);
+        this.workspaceBlocks.insertAdjacentHTML('beforeend', generateWorkspaceBlock(instance));
         
         const el = document.getElementById(instance.id);
-        el.addEventListener('mousedown', (e) => this.startDragExisting(e, instance));
+        
+        // 添加入场动画
+        el.classList.add('new-block');
+        setTimeout(() => el.classList.remove('new-block'), 300);
+        
+        let isDragging = false;
+        let startX, startY;
+        
+        el.addEventListener('mousedown', (e) => {
+            startX = e.clientX;
+            startY = e.clientY;
+            isDragging = false;
+            this.startDragExisting(e, instance);
+        });
+        
+        el.addEventListener('mousemove', (e) => {
+            if (!isDragging && (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3)) {
+                isDragging = true;
+            }
+        });
+        
         el.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectBlock(instance);
+            if (!isDragging) {
+                e.stopPropagation();
+                this.selectBlock(instance);
+            }
         });
     }
     
@@ -399,6 +423,11 @@ class BlockEditor {
     showProperties(instance) {
         const block = BLOCKS[instance.type];
         const panel = document.getElementById('propertiesContent');
+        
+        if (!block) {
+            panel.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px 0;">未知的块类型</div>';
+            return;
+        }
         
         let html = `<div style="margin-bottom: 12px; font-weight: 600; color: ${block.color};">${block.name}</div>`;
         
@@ -436,7 +465,7 @@ class BlockEditor {
             }
         });
         
-        html += `<button class="btn btn-delete" onclick="editor.deleteBlock(editor.selectedBlock)">🗑️ 删除此块</button>`;
+        html += `<button class="btn btn-delete" onclick="editor.deleteBlock(editor.selectedBlock)"><img src="icons/error.svg" class="icon-sm" alt="删除"> 删除此块</button>`;
         panel.innerHTML = html;
     }
     
@@ -456,8 +485,29 @@ class BlockEditor {
         el.outerHTML = generateWorkspaceBlock(instance);
         
         const newEl = document.getElementById(blockId);
-        newEl.addEventListener('mousedown', (e) => this.startDragExisting(e, instance));
-        newEl.addEventListener('click', (e) => { e.stopPropagation(); this.selectBlock(instance); });
+        let isDragging = false;
+        let startX, startY;
+        
+        newEl.addEventListener('mousedown', (e) => {
+            startX = e.clientX;
+            startY = e.clientY;
+            isDragging = false;
+            this.startDragExisting(e, instance);
+        });
+        
+        newEl.addEventListener('mousemove', (e) => {
+            if (!isDragging && (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3)) {
+                isDragging = true;
+            }
+        });
+        
+        newEl.addEventListener('click', (e) => {
+            if (!isDragging) {
+                e.stopPropagation();
+                this.selectBlock(instance);
+            }
+        });
+        
         if (this.selectedBlock?.id === blockId) {
             newEl.classList.add('selected');
         }
@@ -469,8 +519,28 @@ class BlockEditor {
         if (el) {
             el.outerHTML = generateWorkspaceBlock(instance);
             const newEl = document.getElementById(instance.id);
-            newEl.addEventListener('mousedown', (e) => this.startDragExisting(e, instance));
-            newEl.addEventListener('click', (e) => { e.stopPropagation(); this.selectBlock(instance); });
+            let isDragging = false;
+            let startX, startY;
+            
+            newEl.addEventListener('mousedown', (e) => {
+                startX = e.clientX;
+                startY = e.clientY;
+                isDragging = false;
+                this.startDragExisting(e, instance);
+            });
+            
+            newEl.addEventListener('mousemove', (e) => {
+                if (!isDragging && (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3)) {
+                    isDragging = true;
+                }
+            });
+            
+            newEl.addEventListener('click', (e) => {
+                if (!isDragging) {
+                    e.stopPropagation();
+                    this.selectBlock(instance);
+                }
+            });
         }
     }
     
@@ -505,7 +575,7 @@ class BlockEditor {
             // 检查每个输出端口
             for (let i = 0; i < outputs.length; i++) {
                 const outputName = outputs[i];
-                const offsetX = i * 60 - (outputs.length - 1) * 30; // 多端口水平偏移
+                const offsetX = (i - (outputs.length - 1) / 2) * 40; // 多端口水平偏移（与端口布局一致）
                 
                 if (Math.abs(instance.x - (other.x + offsetX)) < SNAP) {
                     const expectedY = other.y + other.height + 10;
@@ -533,6 +603,22 @@ class BlockEditor {
         el.style.top = instance.y + 'px';
         this.updateConnections();
     }
+
+    getPortCenter(blockId, portSelector) {
+        const blockEl = document.getElementById(blockId);
+        if (!blockEl) return null;
+
+        const portEl = blockEl.querySelector(portSelector);
+        if (!portEl) return null;
+
+        const portRect = portEl.getBoundingClientRect();
+        const workspaceRect = this.workspace.getBoundingClientRect();
+
+        return {
+            x: portRect.left - workspaceRect.left + portRect.width / 2,
+            y: portRect.top - workspaceRect.top + portRect.height / 2
+        };
+    }
     
     updateConnections() {
         this.connectionsGroup.innerHTML = '';
@@ -541,15 +627,17 @@ class BlockEditor {
             const from = this.blocks.find(b => b.id === conn.from);
             const to = this.blocks.find(b => b.id === conn.to);
             if (!from || !to) continue;
-            
-            const fromBlock = BLOCKS[from.type];
-            const outputs = fromBlock.outputs || ['flow'];
-            const portIndex = outputs.indexOf(conn.outputPort) || 0;
-            
-            // 计算输出端口位置
-            const portOffsetX = portIndex * 60 - (outputs.length - 1) * 30;
-            const x1 = from.x + 110 + portOffsetX, y1 = from.y + from.height;
-            const x2 = to.x + 110, y2 = to.y;
+
+            const outputPort = conn.outputPort || 'flow';
+            const fromCenter = this.getPortCenter(conn.from, `.connection-point.output[data-port="${outputPort}"]`)
+                || this.getPortCenter(conn.from, `.connection-point.output`);
+            const toCenter = this.getPortCenter(conn.to, `.connection-point.input[data-port="input"]`)
+                || this.getPortCenter(conn.to, `.connection-point.input`);
+
+            if (!fromCenter || !toCenter) continue;
+
+            const x1 = fromCenter.x, y1 = fromCenter.y;
+            const x2 = toCenter.x, y2 = toCenter.y;
             const midY = (y1 + y2) / 2;
             
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -566,7 +654,7 @@ class BlockEditor {
                 'flow_try': '#10b981',
                 'flow_catch': '#ef4444'
             };
-            path.style.stroke = colors[conn.outputPort] || '#6366f1';
+            path.style.stroke = colors[outputPort] || '#6366f1';
             
             this.connectionsGroup.appendChild(path);
         }
@@ -698,7 +786,7 @@ class BlockEditor {
     }
     
     buildWorkflowJSON() {
-        const triggers = this.blocks.filter(b => BLOCKS[b.type].type === 'trigger');
+        const triggers = this.blocks.filter(b => BLOCKS[b.type]?.type === 'trigger');
         const handlers = [];
         
         const buildFlow = (blockId) => {
@@ -709,6 +797,8 @@ class BlockEditor {
                 const block = this.blocks.find(b => b.id === conn.to);
                 if (block) {
                     const blockDef = BLOCKS[block.type];
+                    if (!blockDef) continue;
+                    
                     const flowItem = {
                         id: block.id,
                         block: block.type,
@@ -797,7 +887,7 @@ class BlockEditor {
         
         for (const conn of conns) {
             const block = this.blocks.find(b => b.id === conn.to);
-            if (block && BLOCKS[block.type].type !== 'trigger') {
+            if (block && BLOCKS[block.type]?.type !== 'trigger') {
                 result.push({
                     block: block,
                     outputPort: conn.outputPort
@@ -877,6 +967,9 @@ class BlockEditor {
         
         // 加载块
         template.blocks.forEach((b, i) => {
+            const blockDef = BLOCKS[b.type];
+            if (!blockDef) return;
+            
             this.blockIdCounter++;
             const instance = {
                 id: `block_${this.blockIdCounter}`,
@@ -885,7 +978,7 @@ class BlockEditor {
                 x: b.x,
                 y: b.y,
                 width: 220,
-                height: 80 + BLOCKS[b.type].params.length * 32
+                height: 80 + blockDef.params.length * 32
             };
             this.blocks.push(instance);
             this.renderBlock(instance);

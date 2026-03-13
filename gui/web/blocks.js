@@ -499,11 +499,12 @@ function generateWorkspaceBlock(blockInstance) {
     
     const paramsHtml = block.params.map(p => {
         const value = blockInstance.params[p.name] ?? p.default;
-        const displayValue = Array.isArray(value) ? value.join(', ') : String(value);
+        const displayValue = Array.isArray(value) ? value.join(', ') : (value ?? '');
+        const escapedValue = String(displayValue).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         return `
             <div class="ws-param">
                 <span class="ws-param-label">${p.label}</span>
-                <span class="ws-param-value">${displayValue}</span>
+                <span class="ws-param-value">${escapedValue}</span>
             </div>
         `;
     }).join('');
@@ -514,12 +515,12 @@ function generateWorkspaceBlock(blockInstance) {
     
     // 输入点（顶部）- 非触发器块有输入点
     if (blockType !== 'trigger') {
-        connectionPointsHtml += `<div class="connection-point input" title="输入端口"></div>`;
+        connectionPointsHtml += `<div class="connection-point input" data-port="input" title="输入端口"></div>`;
     }
     
     // 输出点（底部）
     const outputs = block.outputs || ['flow'];
-    if (outputs.length > 0 && blockType !== 'util' || outputs.includes('flow')) {
+    if ((outputs.length > 0 && blockType !== 'util') || outputs.includes('flow')) {
         // 多输出端口时水平排列
         outputs.forEach((output, i) => {
             if (output.startsWith('flow')) {
@@ -531,7 +532,7 @@ function generateWorkspaceBlock(blockInstance) {
                     'flow_loop': '#f59e0b',
                     'flow_done': '#06b6d4'
                 }[output] || '#6366f1';
-                connectionPointsHtml += `<div class="connection-point output multi-output" style="left: calc(50% + ${offsetX}px); background: ${color};" title="${output}"></div>`;
+                connectionPointsHtml += `<div class="connection-point output multi-output" data-port="${output}" style="left: calc(50% + ${offsetX}px); background: ${color};" title="${output}"></div>`;
             }
         });
     }
