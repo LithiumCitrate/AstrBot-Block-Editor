@@ -3,6 +3,7 @@
 AstrBot Block Compiler CLI
 将行为块JSON编译为AstrBot插件代码
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -27,41 +28,22 @@ def main():
 
   # 验证工作流但不生成代码
   python compile.py -i workflow.json --validate
-"""
+""",
+    )
+
+    parser.add_argument("-i", "--input", type=str, required=True, help="输入工作流JSON文件路径")
+
+    parser.add_argument(
+        "-o", "--output", type=str, default="./output", help="输出目录 (默认: ./output)"
     )
 
     parser.add_argument(
-        "-i", "--input",
-        type=str,
-        required=True,
-        help="输入工作流JSON文件路径"
+        "-b", "--blocks", type=str, default=None, help="块定义文件路径 (默认: 使用内置定义)"
     )
 
-    parser.add_argument(
-        "-o", "--output",
-        type=str,
-        default="./output",
-        help="输出目录 (默认: ./output)"
-    )
+    parser.add_argument("--validate", action="store_true", help="仅验证工作流，不生成代码")
 
-    parser.add_argument(
-        "-b", "--blocks",
-        type=str,
-        default=None,
-        help="块定义文件路径 (默认: 使用内置定义)"
-    )
-
-    parser.add_argument(
-        "--validate",
-        action="store_true",
-        help="仅验证工作流，不生成代码"
-    )
-
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="显示详细信息"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="显示详细信息")
 
     args = parser.parse_args()
 

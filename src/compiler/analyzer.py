@@ -1,6 +1,7 @@
 """
 语义分析器 - 类型检查、变量引用检查、流程连接验证
 """
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,6 +16,7 @@ from .parser import (
 @dataclass
 class Symbol:
     """符号表条目"""
+
     name: str
     symbol_type: str  # "variable", "param", "builtin"
     data_type: str
@@ -93,23 +95,27 @@ class WorkflowAnalyzer:
     def _register_builtins(self) -> None:
         """注册内置符号"""
         for name, (data_type, source) in self.BUILTIN_VARIABLES.items():
-            self.symbol_table.add(Symbol(
-                name=name,
-                symbol_type="builtin",
-                data_type=data_type,
-                scope="global",
-                source=source
-            ))
+            self.symbol_table.add(
+                Symbol(
+                    name=name,
+                    symbol_type="builtin",
+                    data_type=data_type,
+                    scope="global",
+                    source=source,
+                )
+            )
 
     def _register_variable(self, var: VariableDefinition, scope: str) -> None:
         """注册变量符号"""
-        self.symbol_table.add(Symbol(
-            name=var.name,
-            symbol_type="variable",
-            data_type=var.var_type,
-            scope=scope,
-            source=f"self.{var.name}"
-        ))
+        self.symbol_table.add(
+            Symbol(
+                name=var.name,
+                symbol_type="variable",
+                data_type=var.var_type,
+                scope=scope,
+                source=f"self.{var.name}",
+            )
+        )
 
     def _analyze_handler(self, handler: HandlerDefinition) -> None:
         """分析Handler"""
@@ -151,7 +157,9 @@ class WorkflowAnalyzer:
         for param_name, param_def in params_def.items():
             if param_def.get("required", False) and param_name not in block.params:
                 if param_def.get("default") is None:
-                    self.errors.append(f"块 {block.block_type} (id: {block.id}) 缺少必需参数: {param_name}")
+                    self.errors.append(
+                        f"块 {block.block_type} (id: {block.id}) 缺少必需参数: {param_name}"
+                    )
 
         # 检查模板变量引用
         for _param_name, param_value in block.params.items():
@@ -166,6 +174,7 @@ class WorkflowAnalyzer:
     def _check_template_variables(self, template: str, scope: str, block_id: str) -> None:
         """检查模板中的变量引用"""
         import re
+
         # 匹配 {variable} 格式
         pattern = r"\{(\w+)\}"
         matches = re.findall(pattern, template)
@@ -173,9 +182,7 @@ class WorkflowAnalyzer:
         for var_name in matches:
             sym = self.symbol_table.lookup(var_name, scope)
             if sym is None:
-                self.warnings.append(
-                    f"块 {block_id} 引用了未定义的变量: {var_name}"
-                )
+                self.warnings.append(f"块 {block_id} 引用了未定义的变量: {var_name}")
 
     def _check_type(self, value: Any, expected_type: str | None) -> bool:
         """检查类型匹配"""

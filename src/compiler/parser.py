@@ -1,6 +1,7 @@
 """
 工作流解析器 - 解析workflow.json并构建AST
 """
+
 import json
 import re
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from typing import Any
 @dataclass
 class BlockInstance:
     """块实例"""
+
     id: str
     block_type: str
     params: dict[str, Any] = field(default_factory=dict)
@@ -21,6 +23,7 @@ class BlockInstance:
 @dataclass
 class TriggerConfig:
     """触发器配置"""
+
     block_type: str
     params: dict[str, Any] = field(default_factory=dict)
     filters: list[dict[str, Any]] = field(default_factory=list)
@@ -29,6 +32,7 @@ class TriggerConfig:
 @dataclass
 class HandlerDefinition:
     """Handler定义"""
+
     id: str
     name: str
     description: str
@@ -39,6 +43,7 @@ class HandlerDefinition:
 @dataclass
 class VariableDefinition:
     """变量定义"""
+
     name: str
     var_type: str
     default: Any = None
@@ -49,6 +54,7 @@ class VariableDefinition:
 @dataclass
 class ConfigItem:
     """配置项"""
+
     name: str
     item_type: str
     description: str
@@ -60,6 +66,7 @@ class ConfigItem:
 @dataclass
 class WorkflowMetadata:
     """工作流元数据"""
+
     name: str
     author: str
     description: str
@@ -72,6 +79,7 @@ class WorkflowMetadata:
 @dataclass
 class WorkflowAST:
     """工作流抽象语法树"""
+
     metadata: WorkflowMetadata
     handlers: list[HandlerDefinition] = field(default_factory=list)
     variables: list[VariableDefinition] = field(default_factory=list)
@@ -128,7 +136,7 @@ class WorkflowParser:
             config_items=config_items,
             imports=imports,
             init_code=data.get("init_code", ""),
-            terminate_code=data.get("terminate_code", "")
+            terminate_code=data.get("terminate_code", ""),
         )
 
     def _parse_metadata(self, data: dict[str, Any]) -> WorkflowMetadata:
@@ -145,7 +153,7 @@ class WorkflowParser:
             version=data.get("version", "1.0.0"),
             display_name=data.get("display_name", data.get("name", "")),
             repo=data.get("repo", ""),
-            logo=data.get("logo", "")
+            logo=data.get("logo", ""),
         )
 
     def _parse_variable(self, data: dict[str, Any]) -> VariableDefinition:
@@ -155,7 +163,7 @@ class WorkflowParser:
             var_type=data.get("type", "string"),
             default=data.get("default"),
             persistent=data.get("persistent", False),
-            description=data.get("description", "")
+            description=data.get("description", ""),
         )
 
     def _parse_config_item(self, data: dict[str, Any]) -> ConfigItem:
@@ -166,7 +174,7 @@ class WorkflowParser:
             description=data.get("description", ""),
             default=data.get("default"),
             hint=data.get("hint", ""),
-            options=data.get("options", [])
+            options=data.get("options", []),
         )
 
     def _parse_handler(self, data: dict[str, Any]) -> HandlerDefinition:
@@ -179,7 +187,7 @@ class WorkflowParser:
         trigger = TriggerConfig(
             block_type=trigger_data.get("block", ""),
             params=trigger_data.get("params", {}),
-            filters=trigger_data.get("filters", [])
+            filters=trigger_data.get("filters", []),
         )
 
         # 解析流程
@@ -190,7 +198,7 @@ class WorkflowParser:
             name=handler_name,
             description=data.get("description", ""),
             trigger=trigger,
-            flow=flow
+            flow=flow,
         )
 
     def _parse_block_instance(self, data: dict[str, Any]) -> BlockInstance:
@@ -212,7 +220,7 @@ class WorkflowParser:
             block_type=block_type,
             params=data.get("params", {}),
             inputs=data.get("inputs", {}),
-            branches=branches
+            branches=branches,
         )
 
     def validate(self, ast: WorkflowAST) -> bool:

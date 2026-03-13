@@ -1,6 +1,7 @@
 """
 代码生成器 - 将AST转换为Python代码
 """
+
 import re
 from typing import Any
 
@@ -191,7 +192,9 @@ class CodeGenerator:
         elif block_type == "trigger.permission":
             perm = params.get("permission", "ADMIN")
             raise_error = params.get("raise_error", True)
-            return f"@filter.permission_type(filter.PermissionType.{perm}, raise_error={raise_error})"
+            return (
+                f"@filter.permission_type(filter.PermissionType.{perm}, raise_error={raise_error})"
+            )
 
         elif block_type == "trigger.on_loaded":
             return "@filter.on_astrbot_loaded()"
@@ -219,7 +222,7 @@ class CodeGenerator:
             schedule_type = params.get("schedule_type", "interval")
             if schedule_type == "interval":
                 interval = params.get("interval_seconds", 60)
-                return f"@filter.on_schedule(schedule_type=\"interval\", interval={interval})"
+                return f'@filter.on_schedule(schedule_type="interval", interval={interval})'
             elif schedule_type == "daily":
                 time = params.get("time", "09:00")
                 return f'@filter.on_schedule(schedule_type="daily", time="{time}")'
@@ -389,9 +392,9 @@ class CodeGenerator:
                 elif comp_type == "at":
                     lines.append(f'{base_indent}    Comp.At(qq="{content}"),')
                 elif comp_type == "at_all":
-                    lines.append(f'{base_indent}    Comp.AtAll(),')
+                    lines.append(f"{base_indent}    Comp.AtAll(),")
                 elif comp_type == "face":
-                    lines.append(f'{base_indent}    Comp.Face(id={content}),')
+                    lines.append(f"{base_indent}    Comp.Face(id={content}),")
             lines.append(f"{base_indent}]")
             lines.append(f"{base_indent}yield event.chain_result(chain)")
 
@@ -421,7 +424,9 @@ class CodeGenerator:
 
             lines.append(f"{base_indent}import aiohttp")
             lines.append(f"{base_indent}async with aiohttp.ClientSession() as session:")
-            lines.append(f'{base_indent}    async with session.{method.lower()}({url}, headers={headers}, timeout={timeout}) as resp:')
+            lines.append(
+                f"{base_indent}    async with session.{method.lower()}({url}, headers={headers}, timeout={timeout}) as resp:"
+            )
             lines.append(f"{base_indent}        {save_to}_status = resp.status")
             lines.append(f"{base_indent}        {save_to}_body = await resp.text()")
 
@@ -434,7 +439,9 @@ class CodeGenerator:
             system_prompt = params.get("system_prompt", "")
             save_to = params.get("save_to", "llm_response")
 
-            lines.append(f"{base_indent}prov = self.context.get_using_provider(umo=event.unified_msg_origin)")
+            lines.append(
+                f"{base_indent}prov = self.context.get_using_provider(umo=event.unified_msg_origin)"
+            )
             lines.append(f"{base_indent}if prov:")
             lines.append(f"{base_indent}    {save_to} = await prov.text_chat(")
             lines.append(f"{base_indent}        prompt={prompt},")
@@ -452,7 +459,9 @@ class CodeGenerator:
             url = params.get("url", "")
 
             lines.append(f"{base_indent}from astrbot.api.message_components import Card")
-            lines.append(f"{base_indent}card = Card(title={title}, content={content}, image_url=\"{image_url}\", url=\"{url}\")")
+            lines.append(
+                f'{base_indent}card = Card(title={title}, content={content}, image_url="{image_url}", url="{url}")'
+            )
             lines.append(f"{base_indent}yield event.chain_result([card])")
 
         elif block_type == "action.goto":
@@ -490,14 +499,18 @@ class CodeGenerator:
             reject = params.get("reject_add_request", False)
             lines.append(f"{base_indent}group = await event.get_group()")
             lines.append(f"{base_indent}if group:")
-            lines.append(f"{base_indent}    await group.kick_member({user_id}, reject_add_request={reject})")
+            lines.append(
+                f"{base_indent}    await group.kick_member({user_id}, reject_add_request={reject})"
+            )
 
         elif block_type == "action.mute_member":
             user_id = self._render_template(params.get("user_id", ""), self.class_vars)
             duration = params.get("duration", 60)
             lines.append(f"{base_indent}group = await event.get_group()")
             lines.append(f"{base_indent}if group:")
-            lines.append(f"{base_indent}    await group.mute_member({user_id}, duration={duration})")
+            lines.append(
+                f"{base_indent}    await group.mute_member({user_id}, duration={duration})"
+            )
 
         elif block_type == "action.unmute_member":
             user_id = self._render_template(params.get("user_id", ""), self.class_vars)
@@ -510,7 +523,9 @@ class CodeGenerator:
             is_admin = params.get("is_admin", True)
             lines.append(f"{base_indent}group = await event.get_group()")
             lines.append(f"{base_indent}if group:")
-            lines.append(f"{base_indent}    await group.set_member_admin({user_id}, is_admin={is_admin})")
+            lines.append(
+                f"{base_indent}    await group.set_member_admin({user_id}, is_admin={is_admin})"
+            )
 
         elif block_type == "action.store_umo":
             var = params.get("variable", "")
@@ -633,7 +648,9 @@ class CodeGenerator:
                 lines.append(f"{base_indent}{var} = event.is_admin()")
             elif info_type == "is_owner":
                 var = save_to or "_is_owner"
-                lines.append(f"{base_indent}{var} = event.is_owner() if hasattr(event, 'is_owner') else False")
+                lines.append(
+                    f"{base_indent}{var} = event.is_owner() if hasattr(event, 'is_owner') else False"
+                )
 
         elif block_type == "util.get_group_info":
             info_type = params.get("info_type", "id")
@@ -650,7 +667,9 @@ class CodeGenerator:
                 elif info_type == "member_count":
                     lines.append(f"{base_indent}{var} = group.member_count if group else 0")
                 elif info_type == "description":
-                    lines.append(f'{base_indent}{var} = group.group_desc if group and hasattr(group, "group_desc") else ""')
+                    lines.append(
+                        f'{base_indent}{var} = group.group_desc if group and hasattr(group, "group_desc") else ""'
+                    )
 
         elif block_type == "util.get_message":
             info_type = params.get("info_type", "text")
@@ -667,7 +686,9 @@ class CodeGenerator:
                 lines.append(f"{base_indent}{var} = event.get_message_type()")
             elif info_type == "has_image":
                 var = save_to or "_has_image"
-                lines.append(f"{base_indent}{var} = any(isinstance(c, Comp.Image) for c in event.get_messages())")
+                lines.append(
+                    f"{base_indent}{var} = any(isinstance(c, Comp.Image) for c in event.get_messages())"
+                )
 
         elif block_type == "util.random":
             mode = params.get("mode", "int")
@@ -702,10 +723,10 @@ class CodeGenerator:
                 self.class_vars.add(name)
                 # 检查是否是列表/字典字面量
                 value_stripped = value_raw.strip()
-                if value_stripped.startswith('[') or value_stripped.startswith('{'):
+                if value_stripped.startswith("[") or value_stripped.startswith("{"):
                     # 直接使用原始值作为Python字面量
                     lines.append(f"{base_indent}self.{name} = {value_raw}")
-                elif value_stripped.lstrip('-').replace('.', '', 1).isdigit():
+                elif value_stripped.lstrip("-").replace(".", "", 1).isdigit():
                     # 数值字面量，直接使用
                     lines.append(f"{base_indent}self.{name} = {value_raw}")
                 else:
@@ -719,7 +740,7 @@ class CodeGenerator:
                 lines.append(f"{base_indent}self.{name} = self.{name} - 1")
             elif operation == "append":
                 value_stripped = value_raw.strip()
-                if value_stripped.lstrip('-').replace('.', '', 1).isdigit():
+                if value_stripped.lstrip("-").replace(".", "", 1).isdigit():
                     # 数值字面量
                     lines.append(f"{base_indent}self.{name}.append({value_raw})")
                 else:
@@ -747,40 +768,54 @@ class CodeGenerator:
             save_to = params.get("save_to", "_loaded_data")
             file_name = params.get("file_name", "plugin_data.json")
 
-            lines.append(f'{base_indent}import json')
-            lines.append(f'{base_indent}from pathlib import Path')
+            lines.append(f"{base_indent}import json")
+            lines.append(f"{base_indent}from pathlib import Path")
             lines.append(f'{base_indent}_data_file = Path(__file__).parent / "{file_name}"')
 
             if operation == "save":
-                lines.append(f'{base_indent}if not _data_file.exists():')
-                lines.append(f'{base_indent}    _data_store = {{}}')
-                lines.append(f'{base_indent}else:')
-                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
-                lines.append(f'{base_indent}        _data_store = json.load(_f)')
-                lines.append(f'{base_indent}_data_store[{key}] = {value}')
+                lines.append(f"{base_indent}if not _data_file.exists():")
+                lines.append(f"{base_indent}    _data_store = {{}}")
+                lines.append(f"{base_indent}else:")
+                lines.append(
+                    f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:'
+                )
+                lines.append(f"{base_indent}        _data_store = json.load(_f)")
+                lines.append(f"{base_indent}_data_store[{key}] = {value}")
                 lines.append(f'{base_indent}with open(_data_file, "w", encoding="utf-8") as _f:')
-                lines.append(f'{base_indent}    json.dump(_data_store, _f, ensure_ascii=False, indent=2)')
+                lines.append(
+                    f"{base_indent}    json.dump(_data_store, _f, ensure_ascii=False, indent=2)"
+                )
             elif operation == "load":
-                lines.append(f'{base_indent}if _data_file.exists():')
-                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
-                lines.append(f'{base_indent}        _data_store = json.load(_f)')
-                lines.append(f'{base_indent}    {save_to} = _data_store.get({key})')
-                lines.append(f'{base_indent}else:')
-                lines.append(f'{base_indent}    {save_to} = None')
+                lines.append(f"{base_indent}if _data_file.exists():")
+                lines.append(
+                    f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:'
+                )
+                lines.append(f"{base_indent}        _data_store = json.load(_f)")
+                lines.append(f"{base_indent}    {save_to} = _data_store.get({key})")
+                lines.append(f"{base_indent}else:")
+                lines.append(f"{base_indent}    {save_to} = None")
             elif operation == "delete":
-                lines.append(f'{base_indent}if _data_file.exists():')
-                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
-                lines.append(f'{base_indent}        _data_store = json.load(_f)')
-                lines.append(f'{base_indent}    if {key} in _data_store:')
-                lines.append(f'{base_indent}        del _data_store[{key}]')
-                lines.append(f'{base_indent}        with open(_data_file, "w", encoding="utf-8") as _f:')
-                lines.append(f'{base_indent}            json.dump(_data_store, _f, ensure_ascii=False, indent=2)')
+                lines.append(f"{base_indent}if _data_file.exists():")
+                lines.append(
+                    f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:'
+                )
+                lines.append(f"{base_indent}        _data_store = json.load(_f)")
+                lines.append(f"{base_indent}    if {key} in _data_store:")
+                lines.append(f"{base_indent}        del _data_store[{key}]")
+                lines.append(
+                    f'{base_indent}        with open(_data_file, "w", encoding="utf-8") as _f:'
+                )
+                lines.append(
+                    f"{base_indent}            json.dump(_data_store, _f, ensure_ascii=False, indent=2)"
+                )
             elif operation == "exists":
-                lines.append(f'{base_indent}_exists_result = False')
-                lines.append(f'{base_indent}if _data_file.exists():')
-                lines.append(f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:')
-                lines.append(f'{base_indent}        _data_store = json.load(_f)')
-                lines.append(f'{base_indent}    _exists_result = {key} in _data_store')
+                lines.append(f"{base_indent}_exists_result = False")
+                lines.append(f"{base_indent}if _data_file.exists():")
+                lines.append(
+                    f'{base_indent}    with open(_data_file, "r", encoding="utf-8") as _f:'
+                )
+                lines.append(f"{base_indent}        _data_store = json.load(_f)")
+                lines.append(f"{base_indent}    _exists_result = {key} in _data_store")
 
         elif block_type == "util.format_string":
             template = self._render_template(params.get("template", ""), self.class_vars)
@@ -818,7 +853,9 @@ class CodeGenerator:
                 lines.append(f"{base_indent}{save_to} = _json_obj")
             elif operation == "stringify":
                 lines.append(f"{base_indent}import json")
-                lines.append(f"{base_indent}{save_to} = json.dumps({json_string}, ensure_ascii=False, indent=2)")
+                lines.append(
+                    f"{base_indent}{save_to} = json.dumps({json_string}, ensure_ascii=False, indent=2)"
+                )
 
         elif block_type == "util.debug_log":
             variables = params.get("variables", [])
@@ -885,15 +922,21 @@ class CodeGenerator:
 
             if operation == "read":
                 lines.append(f"{base_indent}if _file_path.exists():")
-                lines.append(f'{base_indent}    with open(_file_path, "r", encoding="{encoding}") as _f:')
+                lines.append(
+                    f'{base_indent}    with open(_file_path, "r", encoding="{encoding}") as _f:'
+                )
                 lines.append(f"{base_indent}        {save_to} = _f.read()")
                 lines.append(f"{base_indent}else:")
                 lines.append(f"{base_indent}    {save_to} = None")
             elif operation == "write":
-                lines.append(f'{base_indent}with open(_file_path, "w", encoding="{encoding}") as _f:')
+                lines.append(
+                    f'{base_indent}with open(_file_path, "w", encoding="{encoding}") as _f:'
+                )
                 lines.append(f"{base_indent}    _f.write({content})")
             elif operation == "append":
-                lines.append(f'{base_indent}with open(_file_path, "a", encoding="{encoding}") as _f:')
+                lines.append(
+                    f'{base_indent}with open(_file_path, "a", encoding="{encoding}") as _f:'
+                )
                 lines.append(f"{base_indent}    _f.write({content})")
             elif operation == "exists":
                 lines.append(f"{base_indent}_exists_result = _file_path.exists()")
@@ -925,7 +968,9 @@ class CodeGenerator:
             elif operation == "split":
                 lines.append(f'{base_indent}{save_to} = re.split(r"{pattern}", {text})')
             elif operation == "sub":
-                lines.append(f'{base_indent}{save_to} = re.sub(r"{pattern}", "{replacement}", {text})')
+                lines.append(
+                    f'{base_indent}{save_to} = re.sub(r"{pattern}", "{replacement}", {text})'
+                )
 
         elif block_type == "util.array_operation":
             operation = params.get("operation", "append")
@@ -934,7 +979,7 @@ class CodeGenerator:
             value_raw = params.get("value", "")
             value_stripped = value_raw.strip()
             # 检查是否是数值字面量
-            if value_stripped.lstrip('-').replace('.', '', 1).isdigit():
+            if value_stripped.lstrip("-").replace(".", "", 1).isdigit():
                 value = value_raw
             else:
                 value = self._render_template(value_raw, self.class_vars)
@@ -963,7 +1008,9 @@ class CodeGenerator:
             elif operation == "contains":
                 lines.append(f"{base_indent}{save_to} = {value} in {array_ref}")
             elif operation == "index":
-                lines.append(f"{base_indent}{save_to} = {array_ref}.index({value}) if {value} in {array_ref} else -1")
+                lines.append(
+                    f"{base_indent}{save_to} = {array_ref}.index({value}) if {value} in {array_ref} else -1"
+                )
             elif operation == "slice":
                 if end == -1:
                     lines.append(f"{base_indent}{save_to} = {array_ref}[{start}:]")
@@ -974,7 +1021,9 @@ class CodeGenerator:
             elif operation == "reverse":
                 lines.append(f"{base_indent}{array_ref}.reverse()")
             elif operation == "join":
-                lines.append(f'{base_indent}{save_to} = "{separator}".join(str(x) for x in {array_ref})')
+                lines.append(
+                    f'{base_indent}{save_to} = "{separator}".join(str(x) for x in {array_ref})'
+                )
             elif operation == "unique":
                 lines.append(f"{base_indent}{save_to} = list(set({array_ref}))")
             elif operation == "extend":
@@ -1006,7 +1055,9 @@ class CodeGenerator:
             elif operation == "to_list":
                 lines.append(f"{base_indent}import json")
                 lines.append(f"{base_indent}try:")
-                lines.append(f"{base_indent}    self.{save_to} = json.loads({value}) if isinstance({value}, str) else list({value})")
+                lines.append(
+                    f"{base_indent}    self.{save_to} = json.loads({value}) if isinstance({value}, str) else list({value})"
+                )
                 lines.append(f"{base_indent}except:")
                 lines.append(f"{base_indent}    self.{save_to} = []")
             elif operation == "to_dict":
@@ -1022,7 +1073,9 @@ class CodeGenerator:
             lines.append(f"{base_indent}from astrbot.api.event import MessageChain")
             lines.append(f'{base_indent}_target_user = "{user_id}"')
             lines.append(f"{base_indent}_chain = MessageChain().message({content})")
-            lines.append(f"{base_indent}await self.context.send_private_message(_target_user, _chain)")
+            lines.append(
+                f"{base_indent}await self.context.send_private_message(_target_user, _chain)"
+            )
 
         elif block_type == "action.get_member_list":
             save_to = params.get("save_to", "member_list")
@@ -1041,7 +1094,7 @@ class CodeGenerator:
 
     def _render_template(self, text: str, class_vars: set = None) -> str:
         """渲染模板字符串
-        
+
         Args:
             text: 模板文本
             class_vars: 类成员变量名集合（需要self.前缀）
@@ -1073,6 +1126,7 @@ class CodeGenerator:
 
         # 替换其他变量
         pattern = r"\{(\w+)\}"
+
         def replace_var(match):
             var_name = match.group(1)
             # 如果不是内置变量名
@@ -1139,6 +1193,7 @@ class CodeGenerator:
     def _generate_conf_schema(self, ast: WorkflowAST) -> str:
         """生成_conf_schema.json"""
         import json
+
         schema = {}
 
         for item in ast.config_items:

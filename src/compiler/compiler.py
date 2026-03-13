@@ -1,6 +1,7 @@
 """
 BlockCompiler - 编译器主入口
 """
+
 import json
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,7 @@ class BlockCompiler:
     def __init__(self, blocks_path: str | Path | None = None):
         """
         初始化编译器
-        
+
         Args:
             blocks_path: 块定义文件路径
         """
@@ -42,11 +43,11 @@ class BlockCompiler:
     def compile_file(self, workflow_path: str | Path, output_dir: str | Path) -> dict[str, Any]:
         """
         编译工作流文件
-        
+
         Args:
             workflow_path: 工作流JSON文件路径
             output_dir: 输出目录
-        
+
         Returns:
             编译结果信息
         """
@@ -96,10 +97,10 @@ class BlockCompiler:
     def compile_string(self, workflow_json: str) -> dict[str, Any]:
         """
         编译工作流JSON字符串
-        
+
         Args:
             workflow_json: 工作流JSON字符串
-        
+
         Returns:
             编译结果信息（包含生成的代码）
         """
@@ -127,10 +128,10 @@ class BlockCompiler:
     def compile_to_string(self, workflow_path: str | Path) -> dict[str, str]:
         """
         编译工作流文件并返回代码字符串
-        
+
         Args:
             workflow_path: 工作流JSON文件路径
-        
+
         Returns:
             文件名到代码的映射
         """
