@@ -472,6 +472,8 @@
       "category": "trigger",
       "display_name": "用户加入",
       "description": "当有用户加入群聊时触发",
+      "deprecated": true,
+      "deprecated_message": "此触发器在当前AstrBot API中不支持，生成的代码将抛出NotImplementedError",
       "icon": "user-plus",
       "color": "#4CAF50",
       "params": {
@@ -515,6 +517,8 @@
       "category": "trigger",
       "display_name": "用户离开",
       "description": "当有用户离开群聊时触发",
+      "deprecated": true,
+      "deprecated_message": "此触发器在当前AstrBot API中不支持，生成的代码将抛出NotImplementedError",
       "icon": "user-minus",
       "color": "#4CAF50",
       "params": {
@@ -558,6 +562,8 @@
       "category": "trigger",
       "display_name": "文件上传",
       "description": "当有用户上传文件时触发",
+      "deprecated": true,
+      "deprecated_message": "此触发器在当前AstrBot API中不支持，生成的代码将抛出NotImplementedError",
       "icon": "upload",
       "color": "#4CAF50",
       "params": {
@@ -605,6 +611,8 @@
       "category": "trigger",
       "display_name": "表情回应",
       "description": "当用户对消息添加表情回应时触发",
+      "deprecated": true,
+      "deprecated_message": "此触发器在当前AstrBot API中不支持，生成的代码将抛出NotImplementedError",
       "icon": "smile",
       "color": "#4CAF50",
       "params": {
@@ -648,6 +656,8 @@
       "category": "trigger",
       "display_name": "定时触发",
       "description": "按时间计划定时触发",
+      "deprecated": true,
+      "deprecated_message": "此触发器在当前AstrBot API中不支持，生成的代码将抛出NotImplementedError。建议使用asyncio.create_task在on_loaded中实现定时任务",
       "icon": "calendar",
       "color": "#4CAF50",
       "params": {
@@ -896,7 +906,7 @@
           "description": "继续执行的流程"
         }
       },
-      "code_template": "chain = [\n{% for comp in params.components %}{% if comp.type == 'text %}    Comp.Plain({{comp.content | render_template}}),\n{% elif comp.type == 'image' %}    Comp.Image.fromURL({{comp.content | render_template}}),\n{% elif comp.type == 'at' %}    Comp.At(qq={{comp.content}}),\n{% elif comp.type == 'at_all' %}    Comp.AtAll(),\n{% elif comp.type == 'face' %}    Comp.Face(id={{comp.content}}),\n{% endif %}{% endfor %}\n]\nyield event.chain_result(chain)"
+      "code_template": "chain = [\n{% for comp in params.components %}{% if comp.type == 'text %}    Comp.Plain(text={{comp.content | render_template}}),\n{% elif comp.type == 'image' %}    Comp.Image.fromURL({{comp.content | render_template}}),\n{% elif comp.type == 'at' %}    Comp.At(qq={{comp.content}}),\n{% elif comp.type == 'at_all' %}    Comp.AtAll(),\n{% elif comp.type == 'face' %}    Comp.Face(id={{comp.content}}),\n{% endif %}{% endfor %}\n]\nyield event.chain_result(chain)"
     },
 
     "action.send_message": {
@@ -1723,6 +1733,8 @@
       "subcategory": "message_reply",
       "display_name": "回复卡片消息",
       "description": "回复一个卡片样式的消息",
+      "deprecated": true,
+      "deprecated_message": "Card组件在AstrBot API中不存在，生成的代码将抛出NotImplementedError",
       "icon": "layout",
       "color": "#2196F3",
       "params": {
@@ -1774,6 +1786,8 @@
       "subcategory": "flow_control",
       "display_name": "跳转到标签",
       "description": "跳转到指定的标签位置继续执行",
+      "deprecated": true,
+      "deprecated_message": "Python不支持goto语句，生成的代码将抛出NotImplementedError。请使用循环或条件语句替代",
       "icon": "navigation",
       "color": "#2196F3",
       "params": {
@@ -1805,6 +1819,8 @@
       "subcategory": "flow_control",
       "display_name": "定义标签",
       "description": "定义一个标签位置，供跳转使用",
+      "deprecated": true,
+      "deprecated_message": "Python不支持goto语句，标签功能无实际作用。请使用循环或条件语句替代",
       "icon": "bookmark",
       "color": "#2196F3",
       "params": {

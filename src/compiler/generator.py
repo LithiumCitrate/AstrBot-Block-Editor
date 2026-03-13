@@ -40,21 +40,23 @@ class CodeGenerator:
         lines.extend(self._generate_imports(ast))
         lines.append("")
 
-        # 2. 插件类
+        # 2. @register装饰器
+        lines.append(f'@register("{ast.metadata.name}", "{ast.metadata.author}", "{ast.metadata.description}", "{ast.metadata.version}", "{ast.metadata.repo or ""}")')
+        # 3. 插件类
         lines.append(f"class {self._to_class_name(ast.metadata.name)}(star.Star):")
         lines.append(f'    """{ast.metadata.description}"""')
         lines.append("")
 
-        # 3. __init__方法
+        # 4. __init__方法
         lines.extend(self._generate_init(ast))
         lines.append("")
 
-        # 4. Handler方法
+        # 5. Handler方法
         for handler in ast.handlers:
             lines.extend(self._generate_handler(handler, ast))
             lines.append("")
 
-        # 5. terminate方法
+        # 6. terminate方法
         lines.extend(self._generate_terminate(ast))
 
         return "\n".join(lines)
@@ -65,6 +67,8 @@ class CodeGenerator:
             "from astrbot.api import star",
             "from astrbot.api.event import AstrMessageEvent, filter",
             "from astrbot.api import logger",
+            "from astrbot.api.star import register",
+            "from astrbot.api.provider import ProviderRequest",
             "import asyncio",
             "import random",
             "from datetime import datetime",
@@ -94,6 +98,9 @@ class CodeGenerator:
         elif block.block_type == "action.reply_chain":
             if "import astrbot.api.message_components as Comp" not in imports:
                 imports.append("import astrbot.api.message_components as Comp")
+        elif block.block_type in ["action.reply_face", "trigger.file_received"]:
+            if "import astrbot.api.message_components as Comp" not in imports:
+                imports.append("import astrbot.api.message_components as Comp")
 
         # 检查分支
         for branch_blocks in block.branches.values():
@@ -104,6 +111,7 @@ class CodeGenerator:
         """生成__init__方法"""
         lines = []
         lines.append(f"{self.indent}def __init__(self, context: star.Context) -> None:")
+        lines.append(f"{self.indent}{self.indent}super().__init__(context)")
         lines.append(f"{self.indent}{self.indent}self.context = context")
 
         # 初始化变量
@@ -128,12 +136,14 @@ class CodeGenerator:
 
         # 方法签名
         method_name = handler.name or f"handler_{handler.id}"
-        has_event_param = handler.trigger.block_type not in ["trigger.on_loaded"]
-
-        if has_event_param:
-            lines.append(f"{self.indent}async def {method_name}(self, event: AstrMessageEvent):")
-        else:
+        trigger_type = handler.trigger.block_type
+        
+        if trigger_type == "trigger.on_loaded":
             lines.append(f"{self.indent}async def {method_name}(self):")
+        elif trigger_type == "trigger.on_llm_request":
+            lines.append(f"{self.indent}async def {method_name}(self, event: AstrMessageEvent, req: ProviderRequest):")
+        else:
+            lines.append(f"{self.indent}async def {method_name}(self, event: AstrMessageEvent):")
 
         # Docstring
         desc = handler.description or f"{handler.trigger.block_type} 处理器"
@@ -206,33 +216,13 @@ class CodeGenerator:
             # 关键词触发使用event_message_type + 内部判断
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
 
-        elif block_type == "trigger.user_join":
-            return "@filter.on_user_join()"
+        elif block_type == "trigger.start_with":
+            # 开头匹配触发使用event_message_type + 内部判断
+            return "@filter.event_message_type(filter.EventMessageType.ALL)"
 
-        elif block_type == "trigger.user_leave":
-            return "@filter.on_user_leave()"
-
-        elif block_type == "trigger.file_upload":
-            return "@filter.on_file_upload()"
-
-        elif block_type == "trigger.reaction":
-            return "@filter.on_reaction()"
-
-        elif block_type == "trigger.schedule":
-            schedule_type = params.get("schedule_type", "interval")
-            if schedule_type == "interval":
-                interval = params.get("interval_seconds", 60)
-                return f'@filter.on_schedule(schedule_type="interval", interval={interval})'
-            elif schedule_type == "daily":
-                time = params.get("time", "09:00")
-                return f'@filter.on_schedule(schedule_type="daily", time="{time}")'
-            elif schedule_type == "weekly":
-                time = params.get("time", "09:00")
-                day = params.get("day_of_week", 1)
-                return f'@filter.on_schedule(schedule_type="weekly", time="{time}", day={day})'
-            else:  # cron
-                cron = params.get("cron_expression", "0 9 * * *")
-                return f'@filter.on_schedule(schedule_type="cron", cron="{cron}")'
+        elif block_type == "trigger.end_with":
+            # 结尾匹配触发使用event_message_type + 内部判断
+            return "@filter.event_message_type(filter.EventMessageType.ALL)"
 
         elif block_type == "trigger.random_chance":
             # 随机概率触发使用event_message_type + 内部判断
@@ -241,6 +231,16 @@ class CodeGenerator:
         elif block_type == "trigger.nth_time":
             # 第N次触发使用event_message_type + 内部判断
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
+
+        elif block_type == "trigger.file_received":
+            # 文件接收触发使用event_message_type + 内部判断
+            return "@filter.event_message_type(filter.EventMessageType.ALL)"
+
+        # 以下触发器在AstrBot API中不存在，返回空字符串标记为不支持
+        elif block_type in ["trigger.user_join", "trigger.user_leave", 
+                           "trigger.file_upload", "trigger.reaction", "trigger.schedule"]:
+            # 不支持的触发器类型，将在handler body中生成警告注释
+            return f"# WARNING: {block_type} is not supported in current AstrBot API"
 
         return ""
 
@@ -271,6 +271,14 @@ class CodeGenerator:
         if handler.trigger.block_type == "trigger.keyword":
             lines.extend(self._generate_keyword_check(handler.trigger.params))
 
+        # 特殊处理开头匹配触发
+        elif handler.trigger.block_type == "trigger.start_with":
+            lines.extend(self._generate_start_with_check(handler.trigger.params))
+
+        # 特殊处理结尾匹配触发
+        elif handler.trigger.block_type == "trigger.end_with":
+            lines.extend(self._generate_end_with_check(handler.trigger.params))
+
         # 特殊处理随机概率触发
         elif handler.trigger.block_type == "trigger.random_chance":
             lines.extend(self._generate_random_chance_check(handler.trigger.params))
@@ -278,6 +286,16 @@ class CodeGenerator:
         # 特殊处理第N次触发
         elif handler.trigger.block_type == "trigger.nth_time":
             lines.extend(self._generate_nth_time_check(handler.trigger.params))
+
+        # 特殊处理文件接收触发
+        elif handler.trigger.block_type == "trigger.file_received":
+            lines.extend(self._generate_file_received_check(handler.trigger.params))
+
+        # 不支持的触发器类型
+        elif handler.trigger.block_type in ["trigger.user_join", "trigger.user_leave", 
+                                            "trigger.file_upload", "trigger.reaction", "trigger.schedule"]:
+            lines.append(f"{indent}# WARNING: {handler.trigger.block_type} is not supported in current AstrBot API")
+            lines.append(f"{indent}raise NotImplementedError(\"{handler.trigger.block_type} is not supported\")")
 
         # 生成流程块代码
         for block in handler.flow:
@@ -297,7 +315,6 @@ class CodeGenerator:
         lines = []
         indent = self.indent * 2
 
-        lines.append(f"{indent}import random")
         lines.append(f"{indent}rolled = random.randint(1, 100)")
         lines.append(f"{indent}if rolled > {probability}:")
         lines.append(f"{indent}    return")
@@ -320,6 +337,39 @@ class CodeGenerator:
         lines.append(f"{indent}self._nth_counter[counter_key] += 1")
         lines.append(f"{indent}if self._nth_counter[counter_key] % {n} != 0:")
         lines.append(f"{indent}    return")
+
+        return lines
+
+    def _generate_file_received_check(self, params: dict) -> list[str]:
+        """生成文件接收检查代码"""
+        file_types = params.get("file_types", [])
+        max_size = params.get("max_size", 0)  # KB
+
+        lines = []
+        indent = self.indent * 2
+
+        # 检查消息中是否有文件组件
+        lines.append(f"{indent}_has_file = any(isinstance(c, Comp.File) for c in event.get_messages())")
+        lines.append(f"{indent}if not _has_file:")
+        lines.append(f"{indent}    return")
+        
+        # 获取文件信息
+        lines.append(f"{indent}_file_comp = next((c for c in event.get_messages() if isinstance(c, Comp.File)), None)")
+        lines.append(f"{indent}if _file_comp:")
+        lines.append(f"{indent}    file_name = _file_comp.name if hasattr(_file_comp, 'name') else \"\"")
+        lines.append(f"{indent}    file_url = _file_comp.url if hasattr(_file_comp, 'url') else \"\"")
+        lines.append(f"{indent}    file_size = _file_comp.size if hasattr(_file_comp, 'size') else 0")
+        
+        # 文件类型过滤
+        if file_types:
+            lines.append(f"{indent}    _allowed = any(file_name.endswith(ft) for ft in {file_types})")
+            lines.append(f"{indent}    if not _allowed:")
+            lines.append(f"{indent}        return")
+        
+        # 文件大小限制
+        if max_size > 0:
+            lines.append(f"{indent}    if file_size > {max_size} * 1024:")
+            lines.append(f"{indent}        return")
 
         return lines
 
@@ -355,6 +405,56 @@ class CodeGenerator:
 
         return lines
 
+    def _generate_start_with_check(self, params: dict) -> list[str]:
+        """生成开头匹配检查代码"""
+        prefix = params.get("prefix", "")
+        case_sensitive = params.get("case_sensitive", False)
+
+        lines = []
+        indent = self.indent * 2  # 方法内二级缩进
+
+        lines.append(f"{indent}msg = event.message_str")
+        
+        if not case_sensitive:
+            lines.append(f'{indent}prefix = "{prefix}".lower()')
+            lines.append(f"{indent}if msg.lower().startswith(prefix):")
+            lines.append(f"{indent}    remaining = msg[len(prefix):].lstrip()")
+            lines.append(f"{indent}else:")
+            lines.append(f"{indent}    return")
+        else:
+            lines.append(f'{indent}prefix = "{prefix}"')
+            lines.append(f"{indent}if msg.startswith(prefix):")
+            lines.append(f"{indent}    remaining = msg[len(prefix):].lstrip()")
+            lines.append(f"{indent}else:")
+            lines.append(f"{indent}    return")
+
+        return lines
+
+    def _generate_end_with_check(self, params: dict) -> list[str]:
+        """生成结尾匹配检查代码"""
+        suffix = params.get("suffix", "")
+        case_sensitive = params.get("case_sensitive", False)
+
+        lines = []
+        indent = self.indent * 2  # 方法内二级缩进
+
+        lines.append(f"{indent}msg = event.message_str")
+        
+        if not case_sensitive:
+            lines.append(f'{indent}suffix = "{suffix}".lower()')
+            lines.append(f"{indent}if msg.lower().endswith(suffix):")
+            lines.append(f"{indent}    remaining = msg[:-len(suffix)].rstrip()")
+            lines.append(f"{indent}else:")
+            lines.append(f"{indent}    return")
+        else:
+            lines.append(f'{indent}suffix = "{suffix}"')
+            lines.append(f"{indent}if msg.endswith(suffix):")
+            lines.append(f"{indent}    remaining = msg[:-len(suffix)].rstrip()")
+            lines.append(f"{indent}else:")
+            lines.append(f"{indent}    return")
+
+        return lines
+
     def _generate_block_code(self, block: BlockInstance, indent_level: int = 2) -> list[str]:
         """生成块代码"""
         base_indent = self.indent * indent_level
@@ -386,7 +486,7 @@ class CodeGenerator:
                 comp_type = comp.get("type", "text")
                 content = comp.get("content", "")
                 if comp_type == "text":
-                    lines.append(f'{base_indent}    Comp.Plain("{content}"),')
+                    lines.append(f'{base_indent}    Comp.Plain(text="{content}"),')
                 elif comp_type == "image":
                     lines.append(f'{base_indent}    Comp.Image.fromURL("{content}"),')
                 elif comp_type == "at":
@@ -453,22 +553,19 @@ class CodeGenerator:
             lines.append(f"{base_indent}event.stop_event()")
 
         elif block_type == "action.reply_card":
-            title = self._render_template(params.get("title", ""), self.class_vars)
-            content = self._render_template(params.get("content", ""), self.class_vars)
-            image_url = params.get("image_url", "")
-            url = params.get("url", "")
-
-            lines.append(f"{base_indent}from astrbot.api.message_components import Card")
-            lines.append(
-                f'{base_indent}card = Card(title={title}, content={content}, image_url="{image_url}", url="{url}")'
-            )
-            lines.append(f"{base_indent}yield event.chain_result([card])")
+            # Card组件在AstrBot API中不存在，生成警告
+            lines.append(f"{base_indent}# WARNING: Card component is not supported in AstrBot API")
+            lines.append(f"{base_indent}raise NotImplementedError(\"action.reply_card is not supported\")")
 
         elif block_type == "action.goto":
+            # Python不支持goto，无法实现
             label = params.get("label", "")
-            lines.append(f"{base_indent}goto_{label} = True")
+            lines.append(f"{base_indent}# WARNING: goto is not supported in Python")
+            lines.append(f"{base_indent}# Label '{label}' cannot be jumped to")
+            lines.append(f"{base_indent}raise NotImplementedError(\"action.goto is not supported - use loops or conditionals instead\")")
 
         elif block_type == "action.label":
+            # 标签无实际功能，仅作为注释
             label = params.get("label", "")
             lines.append(f"{base_indent}# Label: {label}")
 
@@ -551,7 +648,8 @@ class CodeGenerator:
             # 生成并行执行代码
             task_names = [f"_parallel_task_{i}" for i in range(len(branches))]
             if wait_all:
-                lines.append(f"{base_indent}await asyncio.gather({', '.join(task_names)})")
+                gather_calls = ", ".join([f"{t}()" for t in task_names])
+                lines.append(f"{base_indent}await asyncio.gather({gather_calls})")
             else:
                 for task in task_names:
                     lines.append(f"{base_indent}asyncio.create_task({task}())")
@@ -574,6 +672,40 @@ class CodeGenerator:
                 for b in false_blocks:
                     for line in self._generate_block_code(b, indent_level + 1):
                         lines.append(line)
+
+        elif block_type == "logic.switch":
+            value = self._render_template(params.get("value", ""), self.class_vars)
+            cases = params.get("cases", [])
+            default_flow_id = params.get("default_flow_id", "")
+
+            lines.append(f"{base_indent}_switch_val = {value}")
+
+            for i, case in enumerate(cases):
+                match_val = case.get("match", "")
+                flow_id = case.get("flow_id", "")
+                branch_blocks = block.branches.get(flow_id, [])
+
+                if i == 0:
+                    lines.append(f'{base_indent}if _switch_val == "{match_val}":')
+                else:
+                    lines.append(f'{base_indent}elif _switch_val == "{match_val}":')
+
+                if branch_blocks:
+                    for b in branch_blocks:
+                        for line in self._generate_block_code(b, indent_level + 1):
+                            lines.append(line)
+                else:
+                    lines.append(f"{base_indent}    pass")
+
+            if default_flow_id:
+                default_blocks = block.branches.get(default_flow_id, [])
+                lines.append(f"{base_indent}else:")
+                if default_blocks:
+                    for b in default_blocks:
+                        for line in self._generate_block_code(b, indent_level + 1):
+                            lines.append(line)
+                else:
+                    lines.append(f"{base_indent}    pass")
 
         elif block_type == "logic.for_each":
             items = params.get("items", "[]")
