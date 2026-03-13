@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt, QUrl, pyqtSlot, QVariant, QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWebChannel import QWebChannel
+from PyQt5.QtGui import QIcon, QPixmap
 
 # 添加编译器路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -119,6 +120,11 @@ class BlockEditorWindow(QMainWindow):
         self.setWindowTitle("AstrBot Block Editor - 可视化插件开发工具")
         self.setGeometry(100, 100, 1400, 900)
         self.setMinimumSize(1024, 700)
+        
+        # 设置窗口图标
+        icon_path = Path(__file__).parent / "icon.svg"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
         
         # 创建Web视图
         self.browser = QWebEngineView()
