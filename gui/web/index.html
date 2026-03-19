@@ -1309,6 +1309,16 @@
     </div>
 
     <script src="blocks.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+        (function () {
+            if (typeof QWebChannel === 'undefined') return;
+            if (!window.qt || !window.qt.webChannelTransport) return;
+            new QWebChannel(window.qt.webChannelTransport, function (channel) {
+                window.pybridge = channel.objects.pybridge;
+            });
+        })();
+    </script>
     <script src="editor.js"></script>
 </body>
 </html>

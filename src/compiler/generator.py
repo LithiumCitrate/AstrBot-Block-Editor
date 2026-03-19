@@ -137,7 +137,7 @@ class CodeGenerator:
         # 方法签名
         method_name = handler.name or f"handler_{handler.id}"
         trigger_type = handler.trigger.block_type
-        
+
         if trigger_type == "trigger.on_loaded":
             lines.append(f"{self.indent}async def {method_name}(self):")
         elif trigger_type == "trigger.on_llm_request":
@@ -237,7 +237,7 @@ class CodeGenerator:
             return "@filter.event_message_type(filter.EventMessageType.ALL)"
 
         # 以下触发器在AstrBot API中不存在，返回空字符串标记为不支持
-        elif block_type in ["trigger.user_join", "trigger.user_leave", 
+        elif block_type in ["trigger.user_join", "trigger.user_leave",
                            "trigger.file_upload", "trigger.reaction", "trigger.schedule"]:
             # 不支持的触发器类型，将在handler body中生成警告注释
             return f"# WARNING: {block_type} is not supported in current AstrBot API"
@@ -292,7 +292,7 @@ class CodeGenerator:
             lines.extend(self._generate_file_received_check(handler.trigger.params))
 
         # 不支持的触发器类型
-        elif handler.trigger.block_type in ["trigger.user_join", "trigger.user_leave", 
+        elif handler.trigger.block_type in ["trigger.user_join", "trigger.user_leave",
                                             "trigger.file_upload", "trigger.reaction", "trigger.schedule"]:
             lines.append(f"{indent}# WARNING: {handler.trigger.block_type} is not supported in current AstrBot API")
             lines.append(f"{indent}raise NotImplementedError(\"{handler.trigger.block_type} is not supported\")")
@@ -352,20 +352,20 @@ class CodeGenerator:
         lines.append(f"{indent}_has_file = any(isinstance(c, Comp.File) for c in event.get_messages())")
         lines.append(f"{indent}if not _has_file:")
         lines.append(f"{indent}    return")
-        
+
         # 获取文件信息
         lines.append(f"{indent}_file_comp = next((c for c in event.get_messages() if isinstance(c, Comp.File)), None)")
         lines.append(f"{indent}if _file_comp:")
         lines.append(f"{indent}    file_name = _file_comp.name if hasattr(_file_comp, 'name') else \"\"")
         lines.append(f"{indent}    file_url = _file_comp.url if hasattr(_file_comp, 'url') else \"\"")
         lines.append(f"{indent}    file_size = _file_comp.size if hasattr(_file_comp, 'size') else 0")
-        
+
         # 文件类型过滤
         if file_types:
             lines.append(f"{indent}    _allowed = any(file_name.endswith(ft) for ft in {file_types})")
             lines.append(f"{indent}    if not _allowed:")
             lines.append(f"{indent}        return")
-        
+
         # 文件大小限制
         if max_size > 0:
             lines.append(f"{indent}    if file_size > {max_size} * 1024:")
@@ -414,7 +414,7 @@ class CodeGenerator:
         indent = self.indent * 2  # 方法内二级缩进
 
         lines.append(f"{indent}msg = event.message_str")
-        
+
         if not case_sensitive:
             lines.append(f'{indent}prefix = "{prefix}".lower()')
             lines.append(f"{indent}if msg.lower().startswith(prefix):")
@@ -439,7 +439,7 @@ class CodeGenerator:
         indent = self.indent * 2  # 方法内二级缩进
 
         lines.append(f"{indent}msg = event.message_str")
-        
+
         if not case_sensitive:
             lines.append(f'{indent}suffix = "{suffix}".lower()')
             lines.append(f"{indent}if msg.lower().endswith(suffix):")

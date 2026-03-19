@@ -151,7 +151,14 @@ class BlockEditor {
             const blockDef = BLOCKS[b.type];
             if (!blockDef) return;
             blockDef.params.forEach(p => {
-                if (p.required && !b.params[p.name]) {
+                const v = b.params ? b.params[p.name] : undefined;
+                const missing = (
+                    v === undefined ||
+                    v === null ||
+                    (typeof v === 'string' && v.trim() === '') ||
+                    (Array.isArray(v) && v.length === 0)
+                );
+                if (p.required && missing) {
                     errors.push(`块「${blockDef.name}」缺少参数：${p.label}`);
                 }
             });
@@ -906,9 +913,23 @@ class BlockEditor {
         
         const workflow = this.buildWorkflowJSON();
         
-        if (window.pybridge) {
-            const result = JSON.parse(window.pybridge.compile(JSON.stringify(workflow)));
-            document.getElementById('codeContent').textContent = result.success ? result.code : '# 错误:\n' + result.errors.join('\n');
+        if (window.pybridge && window.pybridge.compile) {
+            const payload = JSON.stringify(workflow);
+            const applyResult = (raw) => {
+                try {
+                    const result = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    document.getElementById('codeContent').textContent = result.success ? result.code : '# 错误:\n' + (result.errors || []).join('\n');
+                } catch (e) {
+                    document.getElementById('codeContent').textContent = '# 错误:\n' + String(e);
+                }
+            };
+
+            try {
+                const maybeReturn = window.pybridge.compile(payload, applyResult);
+                if (typeof maybeReturn === 'string') applyResult(maybeReturn);
+            } catch (e) {
+                document.getElementById('codeContent').textContent = '# 错误:\n' + String(e);
+            }
         } else {
             document.getElementById('codeContent').textContent = this.generateMockCode(workflow);
         }
@@ -1121,8 +1142,14 @@ function newProject() {
 
 function saveProject() {
     const json = JSON.stringify(editor.buildWorkflowJSON(), null, 2);
-    if (window.pybridge) {
-        window.pybridge.save(json);
+    if (window.pybridge && window.pybridge.save) {
+        try {
+            const onDone = () => {};
+            const maybeReturn = window.pybridge.save(json, onDone);
+            if (typeof maybeReturn === 'boolean') onDone(maybeReturn);
+        } catch (e) {
+            alert('保存失败: ' + String(e));
+        }
     } else {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -1132,9 +1159,21 @@ function saveProject() {
 }
 
 function openProject() {
-    if (window.pybridge) {
-        const json = window.pybridge.open();
-        if (json) editor.loadWorkflow(JSON.parse(json));
+    if (window.pybridge && window.pybridge.open) {
+        const applyOpen = (json) => {
+            try {
+                if (json) editor.loadWorkflow(JSON.parse(json));
+            } catch (e) {
+                alert('文件格式错误');
+            }
+        };
+
+        try {
+            const maybeReturn = window.pybridge.open(applyOpen);
+            if (typeof maybeReturn === 'string') applyOpen(maybeReturn);
+        } catch (e) {
+            alert('打开失败: ' + String(e));
+        }
     } else {
         const input = document.createElement('input');
         input.type = 'file'; input.accept = '.json';
@@ -1156,8 +1195,14 @@ function copyCode() {
 }
 
 function exportPlugin() {
-    if (window.pybridge) {
-        window.pybridge.export(JSON.stringify(editor.buildWorkflowJSON()));
+    if (window.pybridge && window.pybridge.export) {
+        try {
+            const onDone = () => {};
+            const maybeReturn = window.pybridge.export(JSON.stringify(editor.buildWorkflowJSON()), onDone);
+            if (typeof maybeReturn === 'boolean') onDone(maybeReturn);
+        } catch (e) {
+            alert('导出失败: ' + String(e));
+        }
     } else {
         alert('请在桌面应用中使用此功能');
     }
